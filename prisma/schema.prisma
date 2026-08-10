@@ -1,0 +1,714 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String    @id @default(uuid())
+  name              String
+  email             String    @unique
+  phone             String?
+  password_hash     String?
+  email_verified    Boolean   @default(false)
+  avatar_url        String?
+  is_super_admin    Boolean   @default(false)
+  terms_accepted_at DateTime?
+
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  disabled_at DateTime?
+
+  tokens            Token[]
+  memberships       CompanyMember[]
+  invites_sent      Invite[]          @relation("InviteSentBy")
+  budgets_updated   Budget[]
+  budget_entries    BudgetEntry[]
+  requests_canceled PurchaseRequest[] @relation("RequestCanceledBy")
+  files_uploaded    File[]            @relation("FileUploadedBy")
+  files_owned       File[]            @relation("FileOwner")
+  audit_logs        AuditLog[]
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  PASSWORD_CHANGE
+  INVITE
+  APPROVAL_ACTION
+}
+
+model Token {
+  id           String    @id @default(uuid())
+  user_id      String?
+  type         TokenType
+  value        String    @unique
+  reference_id String?
+  expires_at   DateTime
+  consumed_at  DateTime?
+
+  created_at DateTime @default(now())
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, type])
+  @@index([expires_at])
+  @@map("tokens")
+}
+
+enum OnboardingStep {
+  ACCOUNT
+  COMPANY
+  TEAM
+  REVIEW
+  DONE
+}
+
+model Company {
+  id           String  @id @default(uuid())
+  slug         String  @unique
+  legal_name   String
+  trade_name   String?
+  cnpj         String  @unique @db.Char(14)
+  industry     String?
+  company_size String?
+
+  onboarding_step         OnboardingStep @default(ACCOUNT)
+  onboarding_completed_at DateTime?
+
+  overrun_tolerance_percent     Decimal @default(5.00) @db.Decimal(5, 2)
+  reminder_hours                Int     @default(24)
+  escalation_hours              Int     @default(72)
+  dual_approval_threshold_cents BigInt?
+
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  disabled_at DateTime?
+
+  members           CompanyMember[]
+  invites           Invite[]
+  cost_centers      CostCenter[]
+  approval_rules    ApprovalRule[]
+  suppliers         Supplier[]
+  categories        Category[]
+  purchase_requests PurchaseRequest[]
+  files             File[]
+  audit_logs        AuditLog[]
+  notifications     Notification[]
+  subscriptions     Subscription[]
+
+  @@map("companies")
+}
+
+enum CompanyMemberRole {
+  REQUESTER
+  APPROVER
+  FINANCE_ADMIN
+}
+
+model CompanyMember {
+  id         String            @id @default(uuid())
+  user_id    String
+  company_id String
+  role       CompanyMemberRole @default(REQUESTER)
+
+  approval_limit_cents BigInt @default(0)
+
+  default_cost_center_id String?
+  manager_id             String?
+
+  absent_from   DateTime? @db.Date
+  absent_until  DateTime? @db.Date
+  substitute_id String?
+
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  disabled_at DateTime?
+
+  user                User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  company             Company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  default_cost_center CostCenter? @relation("MemberDefaultCostCenter", fields: [default_cost_center_id], references: [id])
+
+  manager      CompanyMember?  @relation("MemberHierarchy", fields: [manager_id], references: [id])
+  subordinates CompanyMember[] @relation("MemberHierarchy")
+  substitute   CompanyMember?  @relation("MemberSubstitute", fields: [substitute_id], references: [id])
+  substituting CompanyMember[] @relation("MemberSubstitute")
+
+  managed_cost_centers CostCenter[]       @relation("CostCenterManager")
+  cost_center_links    CostCenterMember[]
+  purchase_requests    PurchaseRequest[]
+  approval_steps       ApprovalStep[]     @relation("StepExpectedApprover")
+  escalated_steps      ApprovalStep[]     @relation("StepEscalatedFrom")
+  decisions            Decision[]         @relation("DecisionDecider")
+  decisions_on_behalf  Decision[]         @relation("DecisionOnBehalfOf")
+  invites_created      Invite[]           @relation("InviteManager")
+
+  @@unique([user_id, company_id])
+  @@index([company_id, role])
+  @@index([manager_id])
+  @@map("company_members")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model Invite {
+  id         String            @id @default(uuid())
+  company_id String
+  email      String
+  role       CompanyMemberRole @default(REQUESTER)
+
+  default_cost_center_id String?
+  manager_id             String?
+  status                 InviteStatus @default(PENDING)
+  invited_by_id          String
+
+  created_at  DateTime  @default(now())
+  accepted_at DateTime?
+  revoked_at  DateTime?
+
+  company             Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  invited_by          User           @relation("InviteSentBy", fields: [invited_by_id], references: [id])
+  manager             CompanyMember? @relation("InviteManager", fields: [manager_id], references: [id])
+  default_cost_center CostCenter?    @relation(fields: [default_cost_center_id], references: [id])
+
+  @@index([company_id, status])
+  @@index([email])
+  @@map("invites")
+}
+
+model CostCenter {
+  id         String  @id @default(uuid())
+  company_id String
+  name       String
+  code       String?
+  manager_id String
+  parent_id  String?
+
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  disabled_at DateTime?
+
+  company  Company       @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  manager  CompanyMember @relation("CostCenterManager", fields: [manager_id], references: [id])
+  parent   CostCenter?   @relation("CostCenterHierarchy", fields: [parent_id], references: [id])
+  children CostCenter[]  @relation("CostCenterHierarchy")
+
+  members           CostCenterMember[]
+  budgets           Budget[]
+  approval_rules    ApprovalRule[]
+  purchase_requests PurchaseRequest[]
+  default_of        CompanyMember[]    @relation("MemberDefaultCostCenter")
+  invites           Invite[]
+
+  @@unique([company_id, name])
+  @@unique([company_id, code])
+  @@index([company_id])
+  @@index([manager_id])
+  @@map("cost_centers")
+}
+
+model CostCenterMember {
+  id             String @id @default(uuid())
+  cost_center_id String
+  member_id      String
+
+  created_at DateTime @default(now())
+
+  cost_center CostCenter    @relation(fields: [cost_center_id], references: [id], onDelete: Cascade)
+  member      CompanyMember @relation(fields: [member_id], references: [id], onDelete: Cascade)
+
+  @@unique([cost_center_id, member_id])
+  @@index([cost_center_id])
+  @@index([member_id])
+  @@map("cost_center_members")
+}
+
+model Budget {
+  id             String   @id @default(uuid())
+  cost_center_id String
+  period_start   DateTime @db.Date
+  period_end     DateTime @db.Date
+
+  total_amount_cents BigInt
+
+  change_reason String?
+  updated_by_id String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cost_center CostCenter @relation(fields: [cost_center_id], references: [id], onDelete: Cascade)
+  updated_by  User?      @relation(fields: [updated_by_id], references: [id])
+
+  entries BudgetEntry[]
+
+  @@unique([cost_center_id, period_start])
+  @@index([cost_center_id, period_start, period_end])
+  @@map("budgets")
+}
+
+enum BudgetEntryType {
+  CONSUMPTION
+  REVERSAL
+}
+
+model BudgetEntry {
+  id                  String          @id @default(uuid())
+  budget_id           String
+  purchase_request_id String
+  type                BudgetEntryType
+
+  amount_cents BigInt
+
+  description    String?
+  recorded_by_id String?
+
+  occurred_at DateTime @default(now())
+
+  budget           Budget          @relation(fields: [budget_id], references: [id], onDelete: Cascade)
+  purchase_request PurchaseRequest @relation(fields: [purchase_request_id], references: [id])
+  recorded_by      User?           @relation(fields: [recorded_by_id], references: [id])
+
+  @@index([budget_id])
+  @@index([purchase_request_id])
+  @@index([budget_id, occurred_at])
+  @@map("budget_entries")
+}
+
+enum ApproverType {
+  DIRECT_MANAGER
+  COST_CENTER_MANAGER
+}
+
+model ApprovalRule {
+  id             String  @id @default(uuid())
+  company_id     String
+  cost_center_id String?
+  category_id    String?
+
+  min_amount_cents BigInt
+  max_amount_cents BigInt?
+
+  approver_type          ApproverType
+  requires_dual_approval Boolean      @default(false)
+  is_active              Boolean      @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company     Company     @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  cost_center CostCenter? @relation(fields: [cost_center_id], references: [id])
+  category    Category?   @relation(fields: [category_id], references: [id])
+
+  @@index([company_id, min_amount_cents])
+  @@index([company_id, is_active])
+  @@map("approval_rules")
+}
+
+enum RegistrationStatus {
+  ACTIVE
+  CLOSED
+  INACTIVE
+  SUSPENDED
+  VOID
+  UNKNOWN
+}
+
+enum ValidationStatus {
+  VALIDATED
+  PENDING
+  FAILED
+}
+
+model Supplier {
+  id         String @id @default(uuid())
+  company_id String
+  cnpj       String @db.Char(14)
+
+  legal_name String
+  trade_name String?
+
+  registration_status RegistrationStatus @default(UNKNOWN)
+  validation_status   ValidationStatus   @default(PENDING)
+
+  street   String?
+  city     String?
+  state    String? @db.Char(2)
+  zip_code String?
+  email    String?
+  phone    String?
+
+  validated_at DateTime?
+  blocked      Boolean   @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company           Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_requests PurchaseRequest[]
+
+  @@unique([company_id, cnpj])
+  @@index([company_id, registration_status])
+  @@index([validated_at])
+  @@map("suppliers")
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  company_id  String
+  name        String
+  description String?
+  active      Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company           Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_requests PurchaseRequest[]
+  approval_rules    ApprovalRule[]
+
+  @@unique([company_id, name])
+  @@index([company_id, active])
+  @@map("categories")
+}
+
+enum Urgency {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RequestStatus {
+  DRAFT
+  PENDING
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+  CANCELED
+  COMPLETED
+}
+
+model PurchaseRequest {
+  id     String @id @default(uuid())
+  number String
+
+  company_id     String
+  requester_id   String
+  cost_center_id String
+  category_id    String?
+  supplier_id    String?
+
+  title              String
+  description        String? @db.Text
+  total_amount_cents BigInt
+
+  urgency           Urgency       @default(MEDIUM)
+  status            RequestStatus @default(DRAFT)
+  payment_terms     String?
+  requires_override Boolean       @default(false)
+
+  created_at   DateTime  @default(now())
+  submitted_at DateTime?
+  finalized_at DateTime?
+
+  canceled_by_id String?
+  cancel_reason  String?
+
+  updated_at DateTime @updatedAt
+
+  company     Company       @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  requester   CompanyMember @relation(fields: [requester_id], references: [id])
+  cost_center CostCenter    @relation(fields: [cost_center_id], references: [id])
+  category    Category?     @relation(fields: [category_id], references: [id])
+  supplier    Supplier?     @relation(fields: [supplier_id], references: [id])
+  canceled_by User?         @relation("RequestCanceledBy", fields: [canceled_by_id], references: [id])
+
+  items          RequestItem[]
+  files          File[]
+  approval_steps ApprovalStep[]
+  budget_entries BudgetEntry[]
+
+  @@unique([company_id, number])
+  @@index([company_id, status])
+  @@index([requester_id, status])
+  @@index([cost_center_id, status])
+  @@index([supplier_id, created_at])
+  @@index([company_id, created_at])
+  @@map("purchase_requests")
+}
+
+model RequestItem {
+  id                  String  @id @default(uuid())
+  purchase_request_id String
+  description         String
+  quantity            Decimal @db.Decimal(12, 3)
+  unit                String
+  unit_price_cents    BigInt
+  total_cents         BigInt
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  purchase_request PurchaseRequest @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+
+  @@index([purchase_request_id])
+  @@map("request_items")
+}
+
+enum FileType {
+  REQUEST_ATTACHMENT
+  USER_AVATAR
+  COMPANY_LOGO
+}
+
+model File {
+  id         String   @id @default(uuid())
+  company_id String
+  type       FileType
+
+  purchase_request_id String?
+  user_id             String?
+
+  file_name   String
+  mime_type   String
+  size_bytes  BigInt
+  storage_key String
+
+  uploaded_by_id String
+  uploaded_at    DateTime @default(now())
+
+  company          Company          @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_request PurchaseRequest? @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+  user             User?            @relation("FileOwner", fields: [user_id], references: [id])
+  uploaded_by      User             @relation("FileUploadedBy", fields: [uploaded_by_id], references: [id])
+
+  @@index([purchase_request_id])
+  @@index([company_id, type])
+  @@map("files")
+}
+
+enum StepStatus {
+  WAITING
+  APPROVED
+  REJECTED
+  ESCALATED
+  CANCELED
+}
+
+model ApprovalStep {
+  id                   String @id @default(uuid())
+  purchase_request_id  String
+  expected_approver_id String
+
+  step_order Int
+  status     StepStatus @default(WAITING)
+
+  requires_dual_approval Boolean @default(false)
+
+  reminder_due_at   DateTime?
+  escalation_due_at DateTime?
+
+  escalated_from_id String?
+  escalated_at      DateTime?
+
+  started_at DateTime?
+  ended_at   DateTime?
+
+  purchase_request  PurchaseRequest @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+  expected_approver CompanyMember   @relation("StepExpectedApprover", fields: [expected_approver_id], references: [id])
+  escalated_from    CompanyMember?  @relation("StepEscalatedFrom", fields: [escalated_from_id], references: [id])
+
+  decisions Decision[]
+
+  @@unique([purchase_request_id, step_order])
+  @@index([purchase_request_id, step_order])
+  @@index([expected_approver_id, status])
+  @@index([status, escalation_due_at])
+  @@index([status, reminder_due_at])
+  @@map("approval_steps")
+}
+
+enum DecisionType {
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+  APPROVED_WITH_OVERRIDE
+}
+
+enum DecisionChannel {
+  PLATFORM
+  EMAIL
+}
+
+model Decision {
+  id               String  @id @default(uuid())
+  approval_step_id String
+  decider_id       String
+  on_behalf_of_id  String?
+
+  type          DecisionType
+  justification String?      @db.Text
+
+  budget_at_time_cents    BigInt
+  committed_at_time_cents BigInt
+  available_at_time_cents BigInt
+
+  channel    DecisionChannel @default(PLATFORM)
+  ip_address String?
+  decided_at DateTime        @default(now())
+
+  approval_step ApprovalStep   @relation(fields: [approval_step_id], references: [id], onDelete: Cascade)
+  decider       CompanyMember  @relation("DecisionDecider", fields: [decider_id], references: [id])
+  on_behalf_of  CompanyMember? @relation("DecisionOnBehalfOf", fields: [on_behalf_of_id], references: [id])
+
+  @@index([approval_step_id])
+  @@index([decider_id, decided_at])
+  @@map("decisions")
+}
+
+enum AuditEventType {
+  CREATED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+  CANCELED
+  REASSIGNED
+  ESCALATED
+  RULES_CHANGED
+  BUDGET_CHANGED
+  MEMBER_CHANGED
+}
+
+model AuditLog {
+  id         String         @id @default(uuid())
+  company_id String
+  actor_id   String?
+  event_type AuditEventType
+
+  entity_type String
+
+  entity_id String
+
+  old_data   Json?
+  new_data   Json?
+  ip_address String?
+
+  occurred_at DateTime @default(now())
+
+  company Company @relation(fields: [company_id], references: [id])
+  actor   User?   @relation(fields: [actor_id], references: [id])
+
+  @@index([company_id, occurred_at])
+  @@index([entity_type, entity_id])
+  @@index([actor_id, occurred_at])
+  @@index([company_id, event_type, occurred_at])
+  @@map("audit_logs")
+}
+
+enum NotificationEvent {
+  INVITE_RECEIVED
+  REQUEST_PENDING
+  DECISION_MADE
+  REQUEST_RETURNED
+  SLA_REMINDER
+  ESCALATED
+  BUDGET_ALERT
+  MONTHLY_REPORT
+}
+
+model Notification {
+  id String @id @default(uuid())
+
+  recipient_id String
+  company_id   String
+
+  event   NotificationEvent
+  title   String
+  message String            @db.Text
+  link    String?
+
+  read_at       DateTime?
+  sent_by_email Boolean   @default(false)
+
+  created_at DateTime @default(now())
+
+  recipient User    @relation(fields: [recipient_id], references: [id], onDelete: Cascade)
+  company   Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@index([recipient_id, read_at])
+  @@index([recipient_id, created_at])
+  @@map("notifications")
+}
+
+enum PlanTier {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  name        String
+  tier        PlanTier @unique
+  price_cents BigInt
+
+  max_members        Int?
+  max_requests_month Int?
+  max_storage_bytes  BigInt?
+
+  features Json @default("[]")
+
+  active Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  CANCELED
+  EXPIRED
+}
+
+model Subscription {
+  id         String             @id @default(uuid())
+  company_id String
+  plan_id    String
+  status     SubscriptionStatus
+
+  period_start DateTime
+  period_end   DateTime?
+
+  contracted_price_cents BigInt?
+
+  feature_overrides Json?
+
+  canceled_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company Company @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  plan    Plan    @relation(fields: [plan_id], references: [id])
+
+  @@index([company_id, status])
+  @@map("subscriptions")
+}
