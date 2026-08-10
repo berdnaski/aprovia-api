@@ -43,6 +43,7 @@ enum TokenType {
   PASSWORD_CHANGE
   INVITE
   APPROVAL_ACTION
+  REFRESH_TOKEN
 }
 
 model Token {
