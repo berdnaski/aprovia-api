@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { FindActiveMembershipUseCase } from 'src/modules/companies/application/find-active-membership.use-case';
+import { MembershipEntity } from 'src/modules/companies/domain/membership.entity';
 import { FindUserByEmailUseCase } from 'src/modules/users/application/find-user-by-email.use-case';
 import { ValidatePasswordUseCase } from 'src/modules/users/application/validate-password.use-case';
 import { UserEntity } from 'src/modules/users/domain/user.entity';
 import { AuthTokenEntity } from '../domain/auth-token.entity';
 import {
   AccountDisabledError,
+  EmailNotVerifiedError,
   InvalidCredentialsError,
 } from '../domain/auth.errors';
-import { MembershipEntity } from '../domain/membership.entity';
-import { IMembershipsRepository } from '../domain/memberships.repository.interface';
 import { LoginDto } from '../dto/login.dto';
 import { IssueSessionService } from './services/issue-session.service';
 
@@ -23,7 +24,7 @@ export class LoginUseCase {
   constructor(
     private readonly findUserByEmailUseCase: FindUserByEmailUseCase,
     private readonly validatePasswordUseCase: ValidatePasswordUseCase,
-    private readonly membershipsRepository: IMembershipsRepository,
+    private readonly findActiveMembershipUseCase: FindActiveMembershipUseCase,
     private readonly issueSessionService: IssueSessionService,
   ) {}
 
@@ -47,9 +48,11 @@ export class LoginUseCase {
       throw new AccountDisabledError();
     }
 
-    const membership = await this.membershipsRepository.findActiveByUser(
-      user.id,
-    );
+    if (!user.emailVerified) {
+      throw new EmailNotVerifiedError();
+    }
+
+    const membership = await this.findActiveMembershipUseCase.execute(user.id);
 
     const tokens = await this.issueSessionService.execute(
       user,
