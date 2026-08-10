@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -14,8 +15,13 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
+  const port = process.env.PORT ?? 3000;
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+    origin: [
+      process.env.FRONTEND_URL ?? 'http://localhost:5173',
+      `http://localhost:${port}`,
+    ],
     credentials: true,
   });
 
@@ -38,7 +44,31 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  const port = process.env.PORT ?? 3000;
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('AprovAI API')
+      .setDescription('Gestão de compras e aprovações')
+      .setVersion('1.0')
+      .addCookieAuth('access_token')
+      .build();
+
+    SwaggerModule.setup(
+      'docs',
+      app,
+      SwaggerModule.createDocument(app, config),
+      {
+        swaggerOptions: {
+          persistAuthorization: true,
+          withCredentials: true,
+          requestInterceptor: (request: { credentials: string }) => {
+            request.credentials = 'include';
+            return request;
+          },
+        },
+      },
+    );
+  }
+
   await app.listen(port);
 
   logger.log(`API em http://localhost:${port}/${process.env.API_PREFIX ?? 'api'}`);
