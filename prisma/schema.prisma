@@ -74,7 +74,6 @@ enum OnboardingStep {
 
 model Company {
   id           String  @id @default(uuid())
-  slug         String  @unique
   legal_name   String
   trade_name   String?
   cnpj         String  @unique @db.Char(14)
@@ -536,8 +535,6 @@ model ApprovalStep {
   @@unique([purchase_request_id, step_order])
   @@index([purchase_request_id, step_order])
   @@index([expected_approver_id, status])
-  @@index([status, escalation_due_at])
-  @@index([status, reminder_due_at])
   @@map("approval_steps")
 }
 
