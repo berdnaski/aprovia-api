@@ -6,21 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-
-interface PrismaKnownError {
-  code: string;
-  meta?: { target?: string[]; field_name?: string; modelName?: string };
-}
-
-function isPrismaKnownError(error: unknown): error is PrismaKnownError {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof (error as { code: unknown }).code === 'string' &&
-    (error as { code: string }).code.startsWith('P')
-  );
-}
+import {
+  isPrismaKnownError,
+  PrismaKnownError,
+} from '../domain/prisma-error';
 
 @Catch()
 export class PrismaExceptionFilter implements ExceptionFilter {
