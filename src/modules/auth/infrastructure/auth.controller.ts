@@ -27,6 +27,7 @@ import { LoginUseCase } from '../application/login.use-case';
 import { LogoutUseCase } from '../application/logout.use-case';
 import { RefreshTokenUseCase } from '../application/refresh-token.use-case';
 import { RegisterUseCase } from '../application/register.use-case';
+import { ResendVerificationUseCase } from '../application/resend-verification.use-case';
 import { ResetPasswordUseCase } from '../application/reset-password.use-case';
 import { VerifyEmailUseCase } from '../application/verify-email.use-case';
 import {
@@ -41,6 +42,7 @@ import {
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
+import { ResendVerificationDto } from '../dto/resend-verification.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import {
@@ -62,6 +64,7 @@ export class AuthController {
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly confirmPasswordChangeUseCase: ConfirmPasswordChangeUseCase,
+    private readonly resendVerificationUseCase: ResendVerificationUseCase,
   ) {}
 
   @Post('register')
@@ -70,7 +73,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Criar conta',
     description:
-      'Cria o usuário e envia e-mail de verificação. O acesso fica em modo leitura até a confirmação.',
+      'Cria o usuário e envia e-mail de verificação. O login só é liberado após a confirmação.',
   })
   @ApiResponse({ status: 201, type: AuthUserDto })
   @ApiResponse({ status: 409, description: 'E-mail já cadastrado' })
@@ -92,6 +95,22 @@ export class AuthController {
     await this.verifyEmailUseCase.execute(query.token);
   }
 
+  @Post('resend-verification')
+  @IsPublic()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 3, ttl: 300_000 } })
+  @ApiOperation({
+    summary: 'Reenviar e-mail de verificação',
+    description:
+      'Invalida o token anterior e envia um novo. Responde 204 mesmo quando o e-mail não existe ou já foi confirmado, para não permitir enumeração de usuários.',
+  })
+  @ApiResponse({ status: 204, description: 'Solicitação registrada' })
+  async resendVerification(
+    @Body() dto: ResendVerificationDto,
+  ): Promise<void> {
+    await this.resendVerificationUseCase.execute(dto.email);
+  }
+
   @Post('login')
   @IsPublic()
   @HttpCode(HttpStatus.OK)
@@ -104,7 +123,10 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, type: AuthResponseDto })
   @ApiResponse({ status: 400, description: 'Credenciais inválidas' })
-  @ApiResponse({ status: 403, description: 'Conta desativada' })
+  @ApiResponse({
+    status: 403,
+    description: 'Conta desativada ou e-mail não confirmado',
+  })
   async login(@Body() dto: LoginDto) {
     const { user, membership, tokens } = await this.loginUseCase.execute(dto);
 

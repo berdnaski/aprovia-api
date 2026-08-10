@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { UserEntity } from 'src/modules/users/domain/user.entity';
-import { MembershipEntity } from '../domain/membership.entity';
+import { MembershipEntity } from 'src/modules/companies/domain/membership.entity';
 
 export class AuthUserDto {
   @ApiProperty({ format: 'uuid' })

@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { TokenType } from 'generated/prisma/enums';
+import { CompanyMemberRole, TokenType } from 'generated/prisma/enums';
 import { UserEntity } from 'src/modules/users/domain/user.entity';
 import { AuthTokenEntity } from '../../domain/auth-token.entity';
-import { MembershipEntity } from '../../domain/membership.entity';
 import { TOKEN_TTL } from '../../domain/token-expiration';
 import { ITokensRepository } from '../../domain/tokens.repository.interface';
 import { JwtTokenService } from './jwt-token.service';
+
+export interface SessionContext {
+  companyId: string;
+  memberId: string;
+  role: CompanyMemberRole;
+}
 
 @Injectable()
 export class IssueSessionService {
@@ -16,16 +21,16 @@ export class IssueSessionService {
 
   async execute(
     user: UserEntity,
-    membership?: MembershipEntity,
+    context?: SessionContext,
   ): Promise<AuthTokenEntity> {
     const accessToken = this.jwtTokenService.signAccessToken({
       sub: user.id,
       email: user.email,
       emailVerified: user.emailVerified,
       isSuperAdmin: user.isSuperAdmin,
-      companyId: membership?.companyId,
-      memberId: membership?.memberId,
-      role: membership?.role,
+      companyId: context?.companyId,
+      memberId: context?.memberId,
+      role: context?.role,
     });
 
     const { value, hash } = this.jwtTokenService.generateOpaqueToken();

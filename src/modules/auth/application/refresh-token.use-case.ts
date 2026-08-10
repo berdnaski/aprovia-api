@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { TokenType } from 'generated/prisma/enums';
+import { FindActiveMembershipUseCase } from 'src/modules/companies/application/find-active-membership.use-case';
 import { FindUserByIdUseCase } from 'src/modules/users/application/find-user-by-id.use-case';
 import { AuthTokenEntity } from '../domain/auth-token.entity';
 import {
   AccountDisabledError,
   InvalidTokenError,
 } from '../domain/auth.errors';
-import { IMembershipsRepository } from '../domain/memberships.repository.interface';
 import { ITokensRepository } from '../domain/tokens.repository.interface';
 import { IssueSessionService } from './services/issue-session.service';
 import { JwtTokenService } from './services/jwt-token.service';
@@ -16,7 +16,7 @@ export class RefreshTokenUseCase {
   constructor(
     private readonly tokensRepository: ITokensRepository,
     private readonly findUserByIdUseCase: FindUserByIdUseCase,
-    private readonly membershipsRepository: IMembershipsRepository,
+    private readonly findActiveMembershipUseCase: FindActiveMembershipUseCase,
     private readonly issueSessionService: IssueSessionService,
     private readonly jwtTokenService: JwtTokenService,
   ) {}
@@ -41,9 +41,7 @@ export class RefreshTokenUseCase {
       throw new AccountDisabledError();
     }
 
-    const membership = await this.membershipsRepository.findActiveByUser(
-      user.id,
-    );
+    const membership = await this.findActiveMembershipUseCase.execute(user.id);
 
     return this.issueSessionService.execute(user, membership ?? undefined);
   }
