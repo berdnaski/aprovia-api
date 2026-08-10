@@ -194,7 +194,7 @@ EXPIRED
 ### Contexto: Identidade
 
 #### `users`
-A pessoa física. Única na plataforma, mesmo participando de várias empresas.
+A pessoa física. Única na plataforma, independentemente do vínculo com a empresa.
 
 ```
 id | UUID | PK
@@ -748,7 +748,7 @@ IDX (recipient_id, read_at)
 IDX (recipient_id, created_at)
 ```
 
-- `recipient_id` aponta para `users`, não para `company_members`: a notificação é da pessoa, que pode estar em várias empresas. `company_id` indica o contexto de origem.
+- `recipient_id` aponta para `users`, não para `company_members`: a notificação pertence à pessoa e sobrevive a mudanças de vínculo. `company_id` indica o contexto de origem.
 - `read_at` nulo alimenta o contador de não lidas (RF71).
 
 ---
@@ -836,7 +836,7 @@ companies ──1:N── cost_centers ──1:N── budgets ──1:N── b
 
 | Relação | Cardinalidade | Regra |
 |---|---|---|
-| `users` ↔ `companies` | N:N via `company_members` | Mesma pessoa em várias empresas (RN01) |
+| `users` ↔ `companies` | N:N via `company_members` | Estrutura preparada para múltiplos vínculos; a v1 restringe a um por usuário (RN01) |
 | `purchase_requests` → `cost_centers` | N:1 | Exatamente um CC ativo (RN13) |
 | `cost_centers` → `budgets` | 1:N | Um por período, sem acúmulo (RN16) |
 | `budgets` → `budget_entries` | 1:N | Extrato imutável do consumo |
@@ -851,7 +851,7 @@ companies ──1:N── cost_centers ──1:N── budgets ──1:N── b
 
 | Regra | Como o modelo atende |
 |---|---|
-| RN01 — e-mail único, várias empresas | `users.email` UQ + N:N via `company_members` |
+| RN01 — e-mail único, um vínculo por usuário | `users.email` UQ + `company_members` UQ `(user_id, company_id)` |
 | RN03 — sempre um admin ativo | Consulta em `company_members` antes de inativar |
 | RN04 — convite expira em 72h | `tokens.expires_at` com `type = INVITE` |
 | RN12 — CNPJ único | `companies.cnpj` UQ |

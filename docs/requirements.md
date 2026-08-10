@@ -207,7 +207,9 @@ Centralizar e automatizar o fluxo de pedidos de compras de uma empresa, garantin
 
 ### Módulo A — Conta, Convites e Acesso
 
-- **RN01** — Um endereço de e-mail é único na plataforma. O mesmo usuário pode pertencer a mais de uma organização, mas mantém uma única credencial de acesso.
+- **RN01** — Um endereço de e-mail é único na plataforma. Cada usuário pertence a exatamente uma organização.
+
+> **Nota de escopo (v1):** o modelo de dados mantém a estrutura N:N em `company_members`, permitindo múltiplos vínculos sem migração futura. A aplicação, porém, restringe a um vínculo ativo por usuário — a sessão carrega uma única empresa e não existe troca de contexto. Habilitar múltiplas empresas depois exige apenas a rota de troca e o ajuste do login, sem alterar o schema.
 - **RN02** — O usuário que cria a organização pelo auto-cadastro (RF01) recebe automaticamente a role de Admin Financeiro daquela organização.
 - **RN03** — Toda organização deve possuir, em todos os momentos, ao menos um usuário ativo com a role de Admin Financeiro. O sistema deve impedir a inativação ou rebaixamento do último Admin Financeiro.
 - **RN04** — O link de convite enviado por e-mail expira em 72 horas. Após expirar, o Admin Financeiro deve reemitir o convite pelo painel.
