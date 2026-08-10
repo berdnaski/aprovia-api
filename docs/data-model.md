@@ -26,6 +26,7 @@
 - Exclusão é lógica via `disabled_at` (RNF26). `NULL` significa registro ativo.
 - Datas e horas em `TIMESTAMPTZ` (com fuso).
 - CNPJ armazenado como `CHAR(14)`, apenas dígitos. A formatação é responsabilidade da interface.
+- **Índices parciais vivem apenas em migration SQL**, nunca no `schema.prisma` — o Prisma não os expressa, e declará-los como `@@index` faria cada `migrate dev` propor recriá-los como índices totais.
 
 ---
 
@@ -640,12 +641,19 @@ step_order  aprovador   status     started   ended
 - `requires_dual_approval` é **copiado** de `approval_rules` no momento da submissão. É essa materialização que implementa a RN22 — alterações posteriores na matriz não afetam pedidos em andamento.
 - `started_at` é o marco a partir do qual os prazos de SLA são calculados; a etapa 2 só começa a contar quando a etapa 1 é aprovada.
 - `escalated_from_id` registra o aprovador original quando há escalonamento (RN32), evitando que a auditoria sugira que o novo aprovador era o titular da etapa.
-- O índice `(status, escalation_due_at)` sustenta o job de SLA. Convém torná-lo parcial:
+- Os índices que sustentam o job de SLA são **parciais** — a tabela cresce indefinidamente, mas `WAITING` é sempre uma fração pequena:
 
 ```sql
-CREATE INDEX idx_steps_sla ON approval_steps (status, escalation_due_at)
+CREATE INDEX idx_steps_pending_escalation ON approval_steps (escalation_due_at)
+  WHERE status = 'WAITING';
+
+CREATE INDEX idx_steps_pending_reminder ON approval_steps (reminder_due_at)
   WHERE status = 'WAITING';
 ```
+
+> **Estes índices não são declarados no `schema.prisma`.** O Prisma não expressa índice parcial, então eles vivem apenas na migration SQL. Declará-los como `@@index` no schema faria o Prisma detectar divergência e propor recriá-los como índices totais a cada `migrate dev` — gerando migrations que conflitam com a que os criou.
+>
+> A mesma regra vale para os demais índices parciais deste documento: `invites` (RN04), `subscriptions` (RN48) e `budget_entries` (RN17).
 
 **Regra de fechamento:**
 
