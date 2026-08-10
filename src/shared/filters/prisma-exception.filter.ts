@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { DomainError } from '../domain/errors/domain.error';
 import {
   isPrismaKnownError,
   PrismaKnownError,
@@ -16,7 +17,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost) {
-    if (!isPrismaKnownError(exception)) {
+    if (exception instanceof DomainError || !isPrismaKnownError(exception)) {
       throw exception;
     }
 
