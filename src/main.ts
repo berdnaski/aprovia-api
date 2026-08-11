@@ -71,7 +71,9 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  logger.log(`API em http://localhost:${port}/${process.env.API_PREFIX ?? 'api'}`);
+  logger.log(
+    `API em http://localhost:${port}/${process.env.API_PREFIX ?? 'api'}`,
+  );
 }
 
 void bootstrap();
