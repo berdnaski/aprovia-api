@@ -2,7 +2,7 @@ import { UserModel as PrismaUser } from 'generated/prisma/models';
 import { UserEntity } from '../../domain/user.entity';
 
 export class UserMapper {
-  static toDomain(raw: PrismaUser): UserEntity {
+  static toDomain(this: void, raw: PrismaUser): UserEntity {
     const entity = new UserEntity();
     entity.id = raw.id;
     entity.name = raw.name;

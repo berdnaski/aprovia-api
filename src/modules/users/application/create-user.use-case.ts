@@ -20,7 +20,7 @@ export class CreateUserUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly passwordHasher: IPasswordHasher,
-  ) { }
+  ) {}
 
   async execute(data: CreateUserInput): Promise<UserEntity> {
     const existing = await this.userRepository.findByEmail(data.email);
