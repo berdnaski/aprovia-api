@@ -38,11 +38,7 @@ export abstract class ICompanyRepository {
 
   abstract findByCnpj(cnpj: string): Promise<CompanyEntity | null>;
 
-
-  abstract update(
-    id: string,
-    data: UpdateCompanyData,
-  ): Promise<CompanyEntity>;
+  abstract update(id: string, data: UpdateCompanyData): Promise<CompanyEntity>;
 
   abstract updatePolicy(
     id: string,

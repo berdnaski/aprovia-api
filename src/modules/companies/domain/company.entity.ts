@@ -1,4 +1,4 @@
-import { OnboardingStep } from "generated/prisma/enums";
+import { OnboardingStep } from 'generated/prisma/enums';
 
 export class CompanyEntity {
   id: string;

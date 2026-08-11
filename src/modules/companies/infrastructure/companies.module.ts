@@ -6,6 +6,7 @@ import { FindActiveMembershipUseCase } from '../application/find-active-membersh
 import { DisableMemberUseCase } from '../application/disable-member.use-case';
 import { FindCompanyByIdUseCase } from '../application/find-company-by-id.use-case';
 import { FindMemberByIdUseCase } from '../application/find-member-by-id.use-case';
+import { GetMemberResponsibilitiesUseCase } from '../application/get-member-responsibilities.use-case';
 import { ListCompanyMembersUseCase } from '../application/list-company-members.use-case';
 import { SetMemberManagerUseCase } from '../application/set-member-manager.use-case';
 import { SetMemberSubstituteUseCase } from '../application/set-member-substitute.use-case';
@@ -16,6 +17,7 @@ import { UpdateMemberRoleUseCase } from '../application/update-member-role.use-c
 import { ICompanyRepository } from '../domain/companies.repository.interface';
 import { ICompanyMemberRepository } from '../domain/company-members.repository.interface';
 import { HierarchyService } from '../domain/services/hierarchy.service';
+import { MemberResponsibilityRegistry } from '../domain/services/member-responsibility.registry';
 import { CompaniesController } from './companies.controller';
 import { CompanyRepository } from './companies.repository';
 import { CompanyMembersController } from './company-members.controller';
@@ -28,6 +30,7 @@ import { CompanyMemberRepository } from './company-members.repository';
     { provide: ICompanyRepository, useClass: CompanyRepository },
     { provide: ICompanyMemberRepository, useClass: CompanyMemberRepository },
     HierarchyService,
+    MemberResponsibilityRegistry,
     CreateCompanyUseCase,
     FindActiveMembershipUseCase,
     FindCompanyByIdUseCase,
@@ -40,7 +43,14 @@ import { CompanyMemberRepository } from './company-members.repository';
     SetMemberManagerUseCase,
     SetMemberSubstituteUseCase,
     DisableMemberUseCase,
+    GetMemberResponsibilitiesUseCase,
   ],
-  exports: [ICompanyMemberRepository, FindMemberByIdUseCase, FindActiveMembershipUseCase],
+  exports: [
+    ICompanyMemberRepository,
+    FindMemberByIdUseCase,
+    FindActiveMembershipUseCase,
+    FindCompanyByIdUseCase,
+    MemberResponsibilityRegistry,
+  ],
 })
 export class CompaniesModule {}

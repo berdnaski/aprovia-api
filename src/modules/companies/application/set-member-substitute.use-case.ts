@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { CompanyMemberRole } from 'generated/prisma/enums';
 import { CompanyMemberEntity } from '../domain/company-member.entity';
 import { ICompanyMemberRepository } from '../domain/company-members.repository.interface';
 import {
+  InactiveSubstituteError,
   InvalidAbsencePeriodError,
   SelfSubstituteError,
+  SubstituteChainError,
   SubstituteDelegationError,
+  SubstituteNotApproverError,
 } from '../domain/companies.errors';
 import { SetMemberSubstituteDto } from '../dto/set-member-substitute.dto';
 import { FindMemberByIdUseCase } from './find-member-by-id.use-case';
@@ -39,8 +43,18 @@ export class SetMemberSubstituteUseCase {
       throw new InvalidAbsencePeriodError();
     }
 
-    if (data.absentUntil <= data.absentFrom) {
+    const absentFrom = this.toUtcDate(data.absentFrom);
+    const absentUntil = this.toUtcDate(data.absentUntil);
+
+    if (absentUntil <= absentFrom) {
       throw new InvalidAbsencePeriodError();
+    }
+
+    const delegatedToMember =
+      await this.companyMemberRepository.listSubstitutedBy(memberId);
+
+    if (delegatedToMember.length > 0) {
+      throw new SubstituteChainError();
     }
 
     const substitute = await this.findMemberByIdUseCase.execute(
@@ -48,14 +62,28 @@ export class SetMemberSubstituteUseCase {
       companyId,
     );
 
+    if (substitute.disabledAt) {
+      throw new InactiveSubstituteError();
+    }
+
+    if (substitute.role === CompanyMemberRole.REQUESTER) {
+      throw new SubstituteNotApproverError();
+    }
+
     if (substitute.substituteId) {
       throw new SubstituteDelegationError();
     }
 
     return this.companyMemberRepository.updateSubstitute(memberId, {
       substituteId: data.substituteId,
-      absentFrom: data.absentFrom,
-      absentUntil: data.absentUntil,
+      absentFrom,
+      absentUntil,
     });
+  }
+
+  private toUtcDate(value: Date): Date {
+    return new Date(
+      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+    );
   }
 }

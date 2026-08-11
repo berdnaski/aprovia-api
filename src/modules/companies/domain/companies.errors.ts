@@ -2,6 +2,10 @@ import {
   ConflictError,
   ValidationError,
 } from 'src/shared/domain/errors/domain.error';
+import {
+  MemberAction,
+  ResponsibilityBlocker,
+} from './member-responsibility-guard';
 
 export class LastAdminError extends ConflictError {
   constructor() {
@@ -36,5 +40,49 @@ export class SubstituteDelegationError extends ValidationError {
 export class InvalidAbsencePeriodError extends ValidationError {
   constructor() {
     super('A data final da ausência deve ser posterior à inicial');
+  }
+}
+
+export class MemberAlreadyDisabledError extends ConflictError {
+  constructor() {
+    super('Este membro já está inativo');
+  }
+}
+
+export class InactiveSubstituteError extends ValidationError {
+  constructor() {
+    super('O substituto precisa ser um membro ativo');
+  }
+}
+
+export class SubstituteNotApproverError extends ValidationError {
+  constructor() {
+    super('O substituto precisa ter perfil de Aprovador ou Admin Financeiro');
+  }
+}
+
+export class SubstituteChainError extends ValidationError {
+  constructor() {
+    super(
+      'Este membro já é substituto de outro aprovador e não pode delegar novamente',
+    );
+  }
+}
+
+const ACTION_LABELS: Record<MemberAction, string> = {
+  DEACTIVATE: 'inativá-lo',
+  DEMOTE: 'rebaixar seu perfil para Solicitante',
+};
+
+export class MemberHasResponsibilitiesError extends ConflictError {
+  constructor(blockers: ResponsibilityBlocker[], action: MemberAction) {
+    super(
+      `Transfira as responsabilidades deste membro antes de ${ACTION_LABELS[action]}: ${blockers
+        .map((blocker) => blocker.message)
+        .join(' e ')}.`,
+      Object.fromEntries(
+        blockers.map((blocker) => [blocker.kind, blocker.items]),
+      ),
+    );
   }
 }

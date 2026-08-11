@@ -1,5 +1,6 @@
-import { CompanyMemberRole } from "generated/prisma/enums";
-import { CompanyMemberEntity } from "./company-member.entity";
+import { CompanyMemberRole } from 'generated/prisma/enums';
+import { TransactionContext } from 'src/shared/domain/transaction.manager';
+import { CompanyMemberEntity } from './company-member.entity';
 
 export interface CreateCompanyMemberData {
   userId: string;
@@ -16,16 +17,74 @@ export interface SubstituteData {
   absentUntil: Date | null;
 }
 
+export interface CountActiveAdminsOptions {
+  excludeMemberId?: string;
+}
+
 export abstract class ICompanyMemberRepository {
   abstract create(data: CreateCompanyMemberData): Promise<CompanyMemberEntity>;
-  abstract findById(id: string): Promise<CompanyMemberEntity | null>;
-  abstract findActiveByUser(userId: string): Promise<CompanyMemberEntity | null>;
+  abstract findById(
+    id: string,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity | null>;
+  abstract findActiveByUser(
+    userId: string,
+  ): Promise<CompanyMemberEntity | null>;
   abstract list(companyId: string): Promise<CompanyMemberEntity[]>;
-  abstract countActiveAdmins(companyId: string): Promise<number>;
 
-  abstract updateRole(id: string, role: CompanyMemberRole): Promise<CompanyMemberEntity>;
-  abstract updateApprovalLimit(id: string, limitCents: bigint): Promise<CompanyMemberEntity>;
-  abstract updateManager(id: string, managerId: string | null): Promise<CompanyMemberEntity>;
-  abstract updateSubstitute(id: string, data: SubstituteData): Promise<CompanyMemberEntity>;
-  abstract disable(id: string): Promise<void>;
+  abstract countActiveAdmins(
+    companyId: string,
+    options?: CountActiveAdminsOptions,
+    context?: TransactionContext,
+  ): Promise<number>;
+
+  abstract lockActiveAdmins(
+    companyId: string,
+    context: TransactionContext,
+  ): Promise<void>;
+
+  abstract listSubordinates(
+    managerId: string,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity[]>;
+
+  abstract listSubstitutedBy(
+    substituteId: string,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity[]>;
+
+  abstract reassignSubordinates(
+    managerId: string,
+    newManagerId: string | null,
+    context?: TransactionContext,
+  ): Promise<void>;
+
+  abstract clearSubstituteReferences(
+    substituteId: string,
+    context?: TransactionContext,
+  ): Promise<void>;
+
+  abstract updateRole(
+    id: string,
+    role: CompanyMemberRole,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity>;
+
+  abstract updateApprovalLimit(
+    id: string,
+    limitCents: bigint,
+  ): Promise<CompanyMemberEntity>;
+
+  abstract updateManager(
+    id: string,
+    managerId: string | null,
+  ): Promise<CompanyMemberEntity>;
+
+  abstract updateSubstitute(
+    id: string,
+    data: SubstituteData,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity>;
+
+  abstract disable(id: string, context?: TransactionContext): Promise<void>;
 }

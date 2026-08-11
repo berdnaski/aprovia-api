@@ -1,4 +1,4 @@
-import { CompanyEntity } from "../../domain/company.entity";
+import { CompanyEntity } from '../../domain/company.entity';
 import { CompanyModel as PrismaCompany } from 'generated/prisma/models';
 
 export class CompanyMapper {
@@ -37,6 +37,6 @@ export class CompanyMapper {
       reminder_hours: entity.reminderHours,
       escalation_hours: entity.escalationHours,
       dual_approval_threshold_cents: entity.dualApprovalThresholdCents,
-    }
+    };
   }
 }

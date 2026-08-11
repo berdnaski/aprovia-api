@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from 'generated/prisma/client';
 import { CompanyMemberRole } from 'generated/prisma/enums';
+import { TransactionContext } from 'src/shared/domain/transaction.manager';
+import { prismaClient } from 'src/shared/infrastructure/database/prisma-transaction.manager';
 import { PrismaService } from 'src/shared/infrastructure/database/prisma.service';
-import { LastAdminError } from '../domain/companies.errors';
 import { CompanyMemberEntity } from '../domain/company-member.entity';
 import {
+  CountActiveAdminsOptions,
   CreateCompanyMemberData,
   ICompanyMemberRepository,
   SubstituteData,
@@ -30,10 +31,14 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
     return CompanyMemberMapper.toDomain(raw);
   }
 
-  async findById(id: string): Promise<CompanyMemberEntity | null> {
-    const raw = await this.prisma.companyMember.findUnique({
-      where: { id },
-    });
+  async findById(
+    id: string,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity | null> {
+    const raw = await prismaClient(
+      this.prisma,
+      context,
+    ).companyMember.findUnique({ where: { id } });
 
     return raw ? CompanyMemberMapper.toDomain(raw) : null;
   }
@@ -62,64 +67,96 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
     return records.map(CompanyMemberMapper.toDomain);
   }
 
-  countActiveAdmins(companyId: string): Promise<number> {
-    return this.prisma.companyMember.count({
+  countActiveAdmins(
+    companyId: string,
+    options?: CountActiveAdminsOptions,
+    context?: TransactionContext,
+  ): Promise<number> {
+    return prismaClient(this.prisma, context).companyMember.count({
       where: {
         company_id: companyId,
         role: CompanyMemberRole.FINANCE_ADMIN,
         disabled_at: null,
+        id: options?.excludeMemberId
+          ? { not: options.excludeMemberId }
+          : undefined,
       },
     });
   }
 
-  async updateRole(
-    id: string,
-    role: CompanyMemberRole,
-  ): Promise<CompanyMemberEntity> {
-    const raw = await this.prisma.$transaction(async (tx) => {
-      const current = await tx.companyMember.findUniqueOrThrow({
-        where: { id },
-        select: { company_id: true, role: true },
-      });
-
-      const losingAdmin =
-        current.role === CompanyMemberRole.FINANCE_ADMIN &&
-        role !== CompanyMemberRole.FINANCE_ADMIN;
-
-      if (losingAdmin) {
-        await this.lockActiveAdmins(tx, current.company_id);
-
-        const remaining = await tx.companyMember.count({
-          where: {
-            company_id: current.company_id,
-            role: CompanyMemberRole.FINANCE_ADMIN,
-            disabled_at: null,
-            id: { not: id },
-          },
-        });
-
-        if (remaining === 0) {
-          throw new LastAdminError();
-        }
-      }
-
-      return tx.companyMember.update({ where: { id }, data: { role } });
-    });
-
-    return CompanyMemberMapper.toDomain(raw);
-  }
-
-  private lockActiveAdmins(
-    tx: Prisma.TransactionClient,
+  async lockActiveAdmins(
     companyId: string,
-  ): Promise<unknown> {
-    return tx.$queryRaw`
+    context: TransactionContext,
+  ): Promise<void> {
+    await prismaClient(this.prisma, context).$queryRaw`
       SELECT id FROM company_members
       WHERE company_id = ${companyId}
         AND role = 'FINANCE_ADMIN'
         AND disabled_at IS NULL
       FOR UPDATE
     `;
+  }
+
+  async listSubordinates(
+    managerId: string,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity[]> {
+    const records = await prismaClient(
+      this.prisma,
+      context,
+    ).companyMember.findMany({
+      where: { manager_id: managerId, disabled_at: null },
+    });
+
+    return records.map(CompanyMemberMapper.toDomain);
+  }
+
+  async listSubstitutedBy(
+    substituteId: string,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity[]> {
+    const records = await prismaClient(
+      this.prisma,
+      context,
+    ).companyMember.findMany({
+      where: { substitute_id: substituteId, disabled_at: null },
+    });
+
+    return records.map(CompanyMemberMapper.toDomain);
+  }
+
+  async reassignSubordinates(
+    managerId: string,
+    newManagerId: string | null,
+    context?: TransactionContext,
+  ): Promise<void> {
+    await prismaClient(this.prisma, context).companyMember.updateMany({
+      where: { manager_id: managerId },
+      data: { manager_id: newManagerId },
+    });
+  }
+
+  async clearSubstituteReferences(
+    substituteId: string,
+    context?: TransactionContext,
+  ): Promise<void> {
+    await prismaClient(this.prisma, context).companyMember.updateMany({
+      where: { substitute_id: substituteId },
+      data: { substitute_id: null, absent_from: null, absent_until: null },
+    });
+  }
+
+  async updateRole(
+    id: string,
+    role: CompanyMemberRole,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity> {
+    const raw = await prismaClient(this.prisma, context).companyMember.update({
+      where: { id },
+      data: { role },
+    });
+
+    return CompanyMemberMapper.toDomain(raw);
   }
 
   async updateApprovalLimit(
@@ -149,8 +186,9 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
   async updateSubstitute(
     id: string,
     data: SubstituteData,
+    context?: TransactionContext,
   ): Promise<CompanyMemberEntity> {
-    const raw = await this.prisma.companyMember.update({
+    const raw = await prismaClient(this.prisma, context).companyMember.update({
       where: { id },
       data: {
         substitute_id: data.substituteId,
@@ -162,34 +200,10 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
     return CompanyMemberMapper.toDomain(raw);
   }
 
-  async disable(id: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const current = await tx.companyMember.findUniqueOrThrow({
-        where: { id },
-        select: { company_id: true, role: true },
-      });
-
-      if (current.role === CompanyMemberRole.FINANCE_ADMIN) {
-        await this.lockActiveAdmins(tx, current.company_id);
-
-        const remaining = await tx.companyMember.count({
-          where: {
-            company_id: current.company_id,
-            role: CompanyMemberRole.FINANCE_ADMIN,
-            disabled_at: null,
-            id: { not: id },
-          },
-        });
-
-        if (remaining === 0) {
-          throw new LastAdminError();
-        }
-      }
-
-      await tx.companyMember.update({
-        where: { id },
-        data: { disabled_at: new Date() },
-      });
+  async disable(id: string, context?: TransactionContext): Promise<void> {
+    await prismaClient(this.prisma, context).companyMember.update({
+      where: { id },
+      data: { disabled_at: new Date() },
     });
   }
 }

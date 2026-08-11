@@ -21,12 +21,14 @@ import { CurrentMember } from 'src/shared/decorators/current-member.decorator';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { DisableMemberUseCase } from '../application/disable-member.use-case';
 import { FindMemberByIdUseCase } from '../application/find-member-by-id.use-case';
+import { GetMemberResponsibilitiesUseCase } from '../application/get-member-responsibilities.use-case';
 import { ListCompanyMembersUseCase } from '../application/list-company-members.use-case';
 import { SetMemberManagerUseCase } from '../application/set-member-manager.use-case';
 import { SetMemberSubstituteUseCase } from '../application/set-member-substitute.use-case';
 import { UpdateMemberLimitUseCase } from '../application/update-member-limit.use-case';
 import { UpdateMemberRoleUseCase } from '../application/update-member-role.use-case';
 import { CompanyMemberResponseDto } from '../dto/company-member-response.dto';
+import { MemberResponsibilitiesResponseDto } from '../dto/member-responsibilities-response.dto';
 import { SetMemberManagerDto } from '../dto/set-member-manager.dto';
 import { SetMemberSubstituteDto } from '../dto/set-member-substitute.dto';
 import { UpdateMemberLimitDto } from '../dto/update-member-limit.dto';
@@ -44,6 +46,7 @@ export class CompanyMembersController {
     private readonly setMemberManagerUseCase: SetMemberManagerUseCase,
     private readonly setMemberSubstituteUseCase: SetMemberSubstituteUseCase,
     private readonly disableMemberUseCase: DisableMemberUseCase,
+    private readonly getMemberResponsibilitiesUseCase: GetMemberResponsibilitiesUseCase,
   ) {}
 
   @Get()
@@ -68,6 +71,25 @@ export class CompanyMembersController {
   ): Promise<CompanyMemberResponseDto> {
     const member = await this.findMemberByIdUseCase.execute(id, companyId);
     return CompanyMemberResponseDto.fromEntity(member);
+  }
+
+  @Get(':id/responsibilities')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @ApiOperation({
+    summary: 'Consultar responsabilidades do membro',
+    description:
+      'Preflight da inativação (RF25): o que precisa ser transferido antes, e o que a inativação resolve sozinha.',
+  })
+  @ApiResponse({ status: 200, type: MemberResponsibilitiesResponseDto })
+  async responsibilities(
+    @CurrentCompany() companyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<MemberResponsibilitiesResponseDto> {
+    const result = await this.getMemberResponsibilitiesUseCase.execute(
+      id,
+      companyId,
+    );
+    return MemberResponsibilitiesResponseDto.fromDomain(result);
   }
 
   @Patch(':id/role')
@@ -170,11 +192,6 @@ export class CompanyMembersController {
     @CurrentCompany() companyId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
-    await this.disableMemberUseCase.execute(
-      id,
-      companyId,
-      memberId,
-    );
+    await this.disableMemberUseCase.execute(id, companyId, memberId);
   }
-
 }

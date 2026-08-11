@@ -1,4 +1,4 @@
-import { CompanyMemberRole } from "generated/prisma/enums";
+import { CompanyMemberRole } from 'generated/prisma/enums';
 
 export class CompanyMemberEntity {
   id: string;
