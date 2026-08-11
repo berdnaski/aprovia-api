@@ -105,9 +105,7 @@ export class AuthController {
       'Invalida o token anterior e envia um novo. Responde 204 mesmo quando o e-mail não existe ou já foi confirmado, para não permitir enumeração de usuários.',
   })
   @ApiResponse({ status: 204, description: 'Solicitação registrada' })
-  async resendVerification(
-    @Body() dto: ResendVerificationDto,
-  ): Promise<void> {
+  async resendVerification(@Body() dto: ResendVerificationDto): Promise<void> {
     await this.resendVerificationUseCase.execute(dto.email);
   }
 

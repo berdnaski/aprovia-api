@@ -3,10 +3,7 @@ import { TokenType } from 'generated/prisma/enums';
 import { FindActiveMembershipUseCase } from 'src/modules/companies/application/find-active-membership.use-case';
 import { FindUserByIdUseCase } from 'src/modules/users/application/find-user-by-id.use-case';
 import { AuthTokenEntity } from '../domain/auth-token.entity';
-import {
-  AccountDisabledError,
-  InvalidTokenError,
-} from '../domain/auth.errors';
+import { AccountDisabledError, InvalidTokenError } from '../domain/auth.errors';
 import { ITokensRepository } from '../domain/tokens.repository.interface';
 import { IssueSessionService } from './services/issue-session.service';
 import { JwtTokenService } from './services/jwt-token.service';

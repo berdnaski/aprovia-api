@@ -43,10 +43,7 @@ export class IssueTokenService {
     return value;
   }
 
-  async deliver(
-    recipient: string,
-    send: () => Promise<void>,
-  ): Promise<void> {
+  async deliver(recipient: string, send: () => Promise<void>): Promise<void> {
     try {
       await send();
     } catch (error) {
