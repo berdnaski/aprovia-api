@@ -2,7 +2,7 @@ import { CompanyMemberModel as PrismaCompanyMember } from 'generated/prisma/mode
 import { CompanyMemberEntity } from '../../domain/company-member.entity';
 
 export class CompanyMemberMapper {
-  static toDomain(raw: PrismaCompanyMember): CompanyMemberEntity {
+  static toDomain(this: void, raw: PrismaCompanyMember): CompanyMemberEntity {
     const entity = new CompanyMemberEntity();
 
     entity.id = raw.id;
