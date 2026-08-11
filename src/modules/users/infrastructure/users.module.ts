@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { CompaniesModule } from 'src/modules/companies/infrastructure/companies.module';
 import { ChangeUserPasswordUseCase } from '../application/change-user-password.use-case';
 import { CreateUserUseCase } from '../application/create-user.use-case';
 import { MarkEmailAsVerifiedUseCase } from '../application/mark-email-as-verified.use-case';
@@ -13,6 +14,7 @@ import { UserRepository } from './users.repository';
 import { UsersController } from './users.controller';
 
 @Module({
+  imports: [forwardRef(() => CompaniesModule)],
   controllers: [UsersController],
   providers: [
     { provide: IUserRepository, useClass: UserRepository },

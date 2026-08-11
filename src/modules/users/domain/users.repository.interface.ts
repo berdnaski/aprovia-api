@@ -23,5 +23,5 @@ export abstract class IUserRepository {
     data: { name?: string; phone?: string | null; avatarUrl?: string | null },
   ): Promise<UserEntity>;
 
-  abstract disable(id: string): Promise<void>;
+  abstract anonymize(id: string): Promise<void>;
 }

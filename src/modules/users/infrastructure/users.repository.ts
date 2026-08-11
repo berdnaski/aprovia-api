@@ -85,10 +85,28 @@ export class UserRepository implements IUserRepository {
     return UserMapper.toDomain(record);
   }
 
-  async disable(id: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id },
-      data: { disabled_at: new Date() },
+  async anonymize(id: string): Promise<void> {
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.companyMember.updateMany({
+        where: { user_id: id, disabled_at: null },
+        data: { disabled_at: now },
+      });
+
+      await tx.token.deleteMany({ where: { user_id: id } });
+
+      await tx.user.update({
+        where: { id },
+        data: {
+          name: 'Usuário removido',
+          email: `deleted-${id}@anonimizado.local`,
+          phone: null,
+          avatar_url: null,
+          password_hash: null,
+          disabled_at: now,
+        },
+      });
     });
   }
 }

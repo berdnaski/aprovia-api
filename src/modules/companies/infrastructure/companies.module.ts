@@ -22,7 +22,7 @@ import { CompanyMembersController } from './company-members.controller';
 import { CompanyMemberRepository } from './company-members.repository';
 
 @Module({
-  imports: [UsersModule, forwardRef(() => AuthModule)],
+  imports: [forwardRef(() => UsersModule), forwardRef(() => AuthModule)],
   controllers: [CompaniesController, CompanyMembersController],
   providers: [
     { provide: ICompanyRepository, useClass: CompanyRepository },

@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -15,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { ClearCookiesInterceptor } from 'src/modules/auth/infrastructure/interceptors/clear-cookies.interceptor';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/shared/domain/authenticated-user';
 import { DeleteAccountUseCase } from '../application/delete-account.use-case';
@@ -61,12 +63,17 @@ export class UsersController {
 
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseInterceptors(ClearCookiesInterceptor)
   @ApiOperation({
     summary: 'Excluir conta',
     description:
-      'Desativa a conta. Os dados pessoais são anonimizados em até 30 dias, preservando registros financeiros e de auditoria de forma pseudonimizada.',
+      'Anonimiza os dados pessoais e encerra a sessão. Os registros financeiros e a trilha de auditoria permanecem pseudonimizados, conforme a obrigação legal de guarda fiscal.',
   })
-  @ApiResponse({ status: 204, description: 'Conta desativada' })
+  @ApiResponse({ status: 204, description: 'Conta anonimizada' })
+  @ApiResponse({
+    status: 409,
+    description: 'Último Admin Financeiro da empresa',
+  })
   async deleteMe(@CurrentUser() user: AuthenticatedUser): Promise<void> {
     await this.deleteAccountUseCase.execute(user.userId);
   }
