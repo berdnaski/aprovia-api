@@ -7,10 +7,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { DomainError } from '../domain/errors/domain.error';
-import {
-  isPrismaKnownError,
-  PrismaKnownError,
-} from '../domain/prisma-error';
+import { isPrismaKnownError, PrismaKnownError } from '../domain/prisma-error';
 
 @Catch()
 export class PrismaExceptionFilter implements ExceptionFilter {

@@ -1,9 +1,5 @@
 export type DomainErrorKind =
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'FORBIDDEN'
-  | 'INVALID_STATE'
-  | 'VALIDATION';
+  'NOT_FOUND' | 'CONFLICT' | 'FORBIDDEN' | 'INVALID_STATE' | 'VALIDATION';
 
 export abstract class DomainError extends Error {
   abstract readonly kind: DomainErrorKind;

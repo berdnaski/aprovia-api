@@ -1,9 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import {
-  AuthenticatedUser,
-} from '../domain/authenticated-user';
+import { AuthenticatedUser } from '../domain/authenticated-user';
 import { ForbiddenError } from '../domain/errors/domain.error';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 
