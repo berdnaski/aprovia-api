@@ -23,16 +23,18 @@ model User {
   updated_at  DateTime  @updatedAt
   disabled_at DateTime?
 
-  tokens            Token[]
-  memberships       CompanyMember[]
-  invites_sent      Invite[]          @relation("InviteSentBy")
-  budgets_updated   Budget[]
-  budget_entries    BudgetEntry[]
-  requests_canceled PurchaseRequest[] @relation("RequestCanceledBy")
-  files_uploaded    File[]            @relation("FileUploadedBy")
-  files_owned       File[]            @relation("FileOwner")
-  audit_logs        AuditLog[]
-  notifications     Notification[]
+  tokens                Token[]
+  memberships           CompanyMember[]
+  invites_sent          Invite[]           @relation("InviteSentBy")
+  budgets_updated       Budget[]
+  budget_entries        BudgetEntry[]
+  requests_canceled     PurchaseRequest[]  @relation("RequestCanceledBy")
+  files_uploaded        File[]             @relation("FileUploadedBy")
+  files_owned           File[]             @relation("FileOwner")
+  extractions_requested ExtractionResult[] @relation("ExtractionRequestedBy")
+  audit_logs            AuditLog[]
+  notifications         Notification[]
+  notification_prefs    NotificationPreference[]
 
   @@map("users")
 }
@@ -435,10 +437,11 @@ model PurchaseRequest {
   supplier    Supplier?     @relation(fields: [supplier_id], references: [id])
   canceled_by User?         @relation("RequestCanceledBy", fields: [canceled_by_id], references: [id])
 
-  items          RequestItem[]
-  files          File[]
-  approval_steps ApprovalStep[]
-  budget_entries BudgetEntry[]
+  items              RequestItem[]
+  files              File[]
+  approval_steps     ApprovalStep[]
+  budget_entries     BudgetEntry[]
+  extraction_results ExtractionResult[]
 
   @@unique([company_id, number])
   @@index([company_id, status])
@@ -447,6 +450,32 @@ model PurchaseRequest {
   @@index([supplier_id, created_at])
   @@index([company_id, created_at])
   @@map("purchase_requests")
+}
+
+enum ExtractionStatus {
+  QUEUED
+  SUCCEEDED
+  FAILED
+}
+
+model ExtractionResult {
+  id                  String           @id @default(uuid())
+  purchase_request_id String
+  status              ExtractionStatus @default(QUEUED)
+
+  fields         Json?
+  failure_reason String?
+
+  requested_by_id String
+
+  created_at   DateTime  @default(now())
+  completed_at DateTime?
+
+  purchase_request PurchaseRequest @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+  requested_by     User            @relation("ExtractionRequestedBy", fields: [requested_by_id], references: [id])
+
+  @@index([purchase_request_id, created_at])
+  @@map("extraction_results")
 }
 
 model RequestItem {
@@ -641,6 +670,8 @@ model Notification {
   read_at       DateTime?
   sent_by_email Boolean   @default(false)
 
+  dedupe_key String @unique
+
   created_at DateTime @default(now())
 
   recipient User    @relation(fields: [recipient_id], references: [id], onDelete: Cascade)
@@ -648,7 +679,25 @@ model Notification {
 
   @@index([recipient_id, read_at])
   @@index([recipient_id, created_at])
+  @@index([recipient_id, company_id, created_at])
   @@map("notifications")
+}
+
+model NotificationPreference {
+  id String @id @default(uuid())
+
+  user_id String
+  event   NotificationEvent
+
+  email_enabled Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, event])
+  @@map("notification_preferences")
 }
 
 enum PlanTier {

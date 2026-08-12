@@ -15,8 +15,6 @@ export class ResendMailService implements IMailService, OnModuleInit {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
 
     if (!apiKey) {
-      // Em desenvolvimento o e-mail cai no log — o fluxo continua testável
-      // sem depender do provedor.
       this.logger.warn(
         'RESEND_API_KEY ausente: e-mails serão apenas registrados no log.',
       );
@@ -46,8 +44,6 @@ export class ResendMailService implements IMailService, OnModuleInit {
     });
 
     if (error) {
-      // Falha de e-mail não pode derrubar a operação que a originou.
-      // Quem chama decide se compensa; aqui só registramos.
       this.logger.error(
         `Falha ao enviar "${input.subject}" para ${input.to}: ${error.message}`,
       );

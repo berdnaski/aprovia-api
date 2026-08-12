@@ -1,11 +1,3 @@
--- O trigger anterior bloqueava todo UPDATE em audit_logs, inclusive o que o
--- próprio Postgres emite ao aplicar ON DELETE SET NULL em actor_id. Isso
--- impedia excluir qualquer usuário que já tivesse gerado eventos.
---
--- A trilha continua imutável no que importa: apenas actor_id pode mudar, e
--- só de um valor para NULL — que é exatamente a anonimização exigida pela
--- RNF07 (LGPD). Todos os demais campos permanecem bloqueados.
-
 DROP TRIGGER IF EXISTS "trg_audit_logs_no_update" ON "audit_logs";
 DROP TRIGGER IF EXISTS "trg_audit_logs_no_delete" ON "audit_logs";
 

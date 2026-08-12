@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { CompanyMemberRole } from 'generated/prisma/enums';
+import { AuditEventType, CompanyMemberRole } from 'generated/prisma/enums';
+import { AuditEntity } from 'src/modules/audit/domain/audit-log.entity';
+import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
+
 import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import {
   LastAdminError,
@@ -17,6 +20,7 @@ export class UpdateMemberRoleUseCase {
     private readonly companyMemberRepository: ICompanyMemberRepository,
     private readonly findMemberByIdUseCase: FindMemberByIdUseCase,
     private readonly responsibilityRegistry: MemberResponsibilityRegistry,
+    private readonly auditLogRepository: IAuditLogRepository,
     private readonly transactionManager: ITransactionManager,
   ) {}
 
@@ -24,6 +28,7 @@ export class UpdateMemberRoleUseCase {
     memberId: string,
     companyId: string,
     role: CompanyMemberRole,
+    actorUserId: string | null = null,
   ): Promise<CompanyMemberEntity> {
     const member = await this.findMemberByIdUseCase.execute(
       memberId,
@@ -41,10 +46,6 @@ export class UpdateMemberRoleUseCase {
     const losesApprovalPower =
       member.role !== CompanyMemberRole.REQUESTER &&
       role === CompanyMemberRole.REQUESTER;
-
-    if (!losesAdmin && !losesApprovalPower) {
-      return this.companyMemberRepository.updateRole(memberId, role);
-    }
 
     return this.transactionManager.run(async (context) => {
       if (losesAdmin) {
@@ -76,6 +77,19 @@ export class UpdateMemberRoleUseCase {
           );
         }
       }
+
+      await this.auditLogRepository.record(
+        {
+          companyId,
+          actorId: actorUserId,
+          eventType: AuditEventType.MEMBER_CHANGED,
+          entityType: AuditEntity.COMPANY_MEMBER,
+          entityId: memberId,
+          oldData: { role: member.role },
+          newData: { role },
+        },
+        context,
+      );
 
       return this.companyMemberRepository.updateRole(memberId, role, context);
     });

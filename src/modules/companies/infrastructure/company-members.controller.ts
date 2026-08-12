@@ -18,6 +18,7 @@ import {
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { CurrentCompany } from 'src/shared/decorators/current-company.decorator';
 import { CurrentMember } from 'src/shared/decorators/current-member.decorator';
+import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { DisableMemberUseCase } from '../application/disable-member.use-case';
 import { FindMemberByIdUseCase } from '../application/find-member-by-id.use-case';
@@ -103,6 +104,7 @@ export class CompanyMembersController {
   @ApiResponse({ status: 409, description: 'Último Admin Financeiro' })
   async updateRole(
     @CurrentCompany() companyId: string,
+    @CurrentUser('userId') userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMemberRoleDto,
   ): Promise<CompanyMemberResponseDto> {
@@ -110,6 +112,7 @@ export class CompanyMembersController {
       id,
       companyId,
       dto.role,
+      userId,
     );
     return CompanyMemberResponseDto.fromEntity(member);
   }

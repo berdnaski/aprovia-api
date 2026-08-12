@@ -9,19 +9,51 @@ import { CompaniesModule } from './modules/companies/infrastructure/companies.mo
 import { CostCentersModule } from './modules/cost-centers/infrastructure/cost-centers.module';
 import { ApprovalRulesModule } from './modules/approval-rules/infrastructure/approval-rules.module';
 import { BudgetsModule } from './modules/budgets/infrastructure/budgets.module';
+import { SuppliersModule } from './modules/suppliers/infrastructure/suppliers.module';
+import { CategoriesModule } from './modules/categories/infrastructure/categories.module';
+import { PurchaseRequestsModule } from './modules/purchase-requests/infrastructure/purchase-requests.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { RequestContextInterceptor } from './shared/infrastructure/http/request-context.interceptor';
+import { AuditModule } from './modules/audit/infrastructure/audit.module';
+import { NotificationsModule } from './modules/notifications/infrastructure/notifications.module';
+import { BillingModule } from './modules/billing/infrastructure/billing.module';
+import { validateEnv } from './shared/config/env.schema';
+import { StorageModule } from './shared/infrastructure/storage/storage.module';
+import { AiModule } from './shared/infrastructure/ai/ai.module';
+import { QueueModule } from './shared/infrastructure/queue/queue.module';
+import { SchedulerModule } from './modules/scheduler/infrastructure/scheduler.module';
+import { InvitesModule } from './modules/invites/infrastructure/invites.module';
+import { PlatformModule } from './modules/platform/infrastructure/platform.module';
+import { AnalyticsModule } from './modules/analytics/infrastructure/analytics.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     DatabaseModule,
+    BillingModule,
+    AuditModule,
+    StorageModule,
+    AiModule,
+    QueueModule,
     SecurityModule,
     MailModule,
+    NotificationsModule,
     UsersModule,
     AuthModule,
     CompaniesModule,
     CostCentersModule,
     ApprovalRulesModule,
     BudgetsModule,
+    SuppliersModule,
+    CategoriesModule,
+    PurchaseRequestsModule,
+    InvitesModule,
+    PlatformModule,
+    AnalyticsModule,
+    SchedulerModule,
+  ],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: RequestContextInterceptor },
   ],
 })
 export class AppModule {}

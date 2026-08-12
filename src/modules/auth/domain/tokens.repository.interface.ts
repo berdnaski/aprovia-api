@@ -15,9 +15,21 @@ export abstract class ITokensRepository {
     type: TokenType,
   ): Promise<TokenEntity | null>;
 
-  abstract consume(id: string): Promise<void>;
+  abstract findByValue(
+    value: string,
+    type: TokenType,
+  ): Promise<TokenEntity | null>;
+
+  abstract consume(id: string): Promise<boolean>;
+
+  abstract release(id: string): Promise<void>;
 
   abstract deleteByUserAndType(userId: string, type: TokenType): Promise<void>;
+
+  abstract consumeByReferences(
+    referenceIds: string[],
+    type: TokenType,
+  ): Promise<number>;
 
   abstract deleteExpired(): Promise<number>;
 }

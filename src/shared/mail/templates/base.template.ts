@@ -4,18 +4,30 @@ interface LayoutInput {
   body: string;
   actionLabel?: string;
   actionUrl?: string;
+  secondaryLabel?: string;
+  secondaryUrl?: string;
   footer?: string;
 }
 
-/** RNF22 — mensagens em português do Brasil. */
 export function renderLayout({
   title,
   greeting,
   body,
   actionLabel,
   actionUrl,
+  secondaryLabel,
+  secondaryUrl,
   footer,
 }: LayoutInput): string {
+  const secondary =
+    secondaryLabel && secondaryUrl
+      ? `<a href="${secondaryUrl}"
+             style="display:inline-block;background:#ffffff;color:#b91c1c;
+                    border:1px solid #fca5a5;text-decoration:none;
+                    padding:11px 24px;border-radius:6px;margin-left:8px;
+                    font-weight:600;font-size:14px;">${secondaryLabel}</a>`
+      : '';
+
   const button =
     actionLabel && actionUrl
       ? `<tr>
@@ -23,7 +35,7 @@ export function renderLayout({
             <a href="${actionUrl}"
                style="display:inline-block;background:#1f2937;color:#ffffff;
                       text-decoration:none;padding:12px 24px;border-radius:6px;
-                      font-weight:600;font-size:14px;">${actionLabel}</a>
+                      font-weight:600;font-size:14px;">${actionLabel}</a>${secondary}
           </td>
         </tr>
         <tr>

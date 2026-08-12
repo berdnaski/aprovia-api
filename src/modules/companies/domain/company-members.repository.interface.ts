@@ -22,7 +22,10 @@ export interface CountActiveAdminsOptions {
 }
 
 export abstract class ICompanyMemberRepository {
-  abstract create(data: CreateCompanyMemberData): Promise<CompanyMemberEntity>;
+  abstract create(
+    data: CreateCompanyMemberData,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity>;
   abstract findById(
     id: string,
     context?: TransactionContext,
