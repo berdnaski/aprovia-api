@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import {
   ApiCookieAuth,
   ApiOperation,
@@ -7,16 +17,22 @@ import {
 } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { CurrentCompany } from 'src/shared/decorators/current-company.decorator';
+import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { ListApprovalRulesUseCase } from '../application/list-approval-rules.use-case';
 import { ReplaceApprovalMatrixUseCase } from '../application/replace-approval-matrix.use-case';
 import { ResolveApprovalRuleUseCase } from '../application/resolve-approval-rule.use-case';
+import { SimulateRouteUseCase } from '../application/simulate-route.use-case';
 import { ApprovalRuleResponseDto } from '../dto/approval-rule-response.dto';
 import { ReplaceApprovalMatrixDto } from '../dto/replace-approval-matrix.dto';
 import {
   ListApprovalRulesQueryDto,
   ResolveApprovalRuleQueryDto,
 } from '../dto/resolve-approval-rule.dto';
+import {
+  SimulateRouteDto,
+  SimulatedRouteResponseDto,
+} from '../dto/simulate-route.dto';
 
 @ApiTags('Matriz de Alçadas')
 @ApiCookieAuth('access_token')
@@ -26,6 +42,7 @@ export class ApprovalRulesController {
     private readonly listApprovalRulesUseCase: ListApprovalRulesUseCase,
     private readonly replaceApprovalMatrixUseCase: ReplaceApprovalMatrixUseCase,
     private readonly resolveApprovalRuleUseCase: ResolveApprovalRuleUseCase,
+    private readonly simulateRouteUseCase: SimulateRouteUseCase,
   ) {}
 
   @Get()
@@ -83,11 +100,13 @@ export class ApprovalRulesController {
   })
   async replace(
     @CurrentCompany() companyId: string,
+    @CurrentUser('userId') userId: string,
     @Body() dto: ReplaceApprovalMatrixDto,
   ): Promise<ApprovalRuleResponseDto[]> {
     const rules = await this.replaceApprovalMatrixUseCase.execute(
       companyId,
       dto,
+      userId,
     );
     return ApprovalRuleResponseDto.fromEntities(rules);
   }
@@ -114,5 +133,26 @@ export class ApprovalRulesController {
       ranges: [],
     });
     return ApprovalRuleResponseDto.fromEntities(rules);
+  }
+
+  @Post('simulate')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Simular a rota de aprovação (RF37)',
+    description:
+      'Roda o mesmo motor da submissão sem persistir nada: não cria approval_steps nem altera pedido. Serve para validar a matriz antes de salvar e para depurar rota em produção.',
+  })
+  @ApiResponse({ status: 200, type: SimulatedRouteResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Matriz não cobre o valor, ou ciclo na hierarquia',
+  })
+  async simulate(
+    @CurrentCompany() companyId: string,
+    @Body() dto: SimulateRouteDto,
+  ): Promise<SimulatedRouteResponseDto> {
+    const result = await this.simulateRouteUseCase.execute(companyId, dto);
+    return SimulatedRouteResponseDto.fromResult(result);
   }
 }

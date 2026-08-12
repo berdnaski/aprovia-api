@@ -1,4 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { AuditEventType } from 'generated/prisma/enums';
+import { AuditEntity } from 'src/modules/audit/domain/audit-log.entity';
+import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
 import { ApprovalRuleEntity } from '../domain/approval-rule.entity';
@@ -16,12 +19,14 @@ export class ReplaceApprovalMatrixUseCase {
     private readonly approvalRuleRepository: IApprovalRuleRepository,
     private readonly approvalMatrixService: ApprovalMatrixService,
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
+    private readonly auditLogRepository: IAuditLogRepository,
     private readonly transactionManager: ITransactionManager,
   ) {}
 
   async execute(
     companyId: string,
     data: ReplaceApprovalMatrixDto,
+    actorUserId: string | null = null,
   ): Promise<ApprovalRuleEntity[]> {
     const tier: ApprovalRuleTier = {
       costCenterId: data.costCenterId ?? null,
@@ -60,6 +65,18 @@ export class ReplaceApprovalMatrixUseCase {
           context,
         );
       }
+
+      await this.auditLogRepository.record(
+        {
+          companyId,
+          actorId: actorUserId,
+          eventType: AuditEventType.RULES_CHANGED,
+          entityType: AuditEntity.APPROVAL_RULE,
+          entityId: `${tier.costCenterId ?? 'global'}:${tier.categoryId ?? 'global'}`,
+          newData: { ranges: sorted.length },
+        },
+        context,
+      );
 
       return this.approvalRuleRepository.listByTier(companyId, tier, context);
     });
