@@ -1,2 +1,1 @@
--- AlterEnum
 ALTER TYPE "TokenType" ADD VALUE 'REFRESH_TOKEN';

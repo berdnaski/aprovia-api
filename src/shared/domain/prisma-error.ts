@@ -13,7 +13,6 @@ export function isPrismaKnownError(error: unknown): error is PrismaKnownError {
   );
 }
 
-/** Violação de restrição de unicidade. */
 export const PRISMA_UNIQUE_VIOLATION = 'P2002';
 
 export function isUniqueViolation(error: unknown): boolean {
