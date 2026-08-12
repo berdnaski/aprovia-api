@@ -100,6 +100,35 @@ export class BudgetRepository implements IBudgetRepository {
     return records.map(BudgetMapper.toDomain);
   }
 
+  async listByPeriodStart(periodStart: Date): Promise<BudgetEntity[]> {
+    const records = await this.prisma.budget.findMany({
+      where: {
+        period_start: periodStart,
+        cost_center: { disabled_at: null },
+      },
+    });
+
+    return records.map(BudgetMapper.toDomain);
+  }
+
+  async createManyIfAbsent(data: CreateBudgetData[]): Promise<number> {
+    if (data.length === 0) {
+      return 0;
+    }
+
+    const { count } = await this.prisma.budget.createMany({
+      data: data.map((budget) => ({
+        cost_center_id: budget.costCenterId,
+        period_start: budget.periodStart,
+        period_end: budget.periodEnd,
+        total_amount_cents: budget.totalAmountCents,
+      })),
+      skipDuplicates: true,
+    });
+
+    return count;
+  }
+
   async updateAmount(
     id: string,
     data: UpdateBudgetAmountData,

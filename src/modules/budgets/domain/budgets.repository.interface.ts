@@ -46,6 +46,10 @@ export abstract class IBudgetRepository {
 
   abstract listByCostCenter(costCenterId: string): Promise<BudgetEntity[]>;
 
+  abstract listByPeriodStart(periodStart: Date): Promise<BudgetEntity[]>;
+
+  abstract createManyIfAbsent(data: CreateBudgetData[]): Promise<number>;
+
   abstract updateAmount(
     id: string,
     data: UpdateBudgetAmountData,
