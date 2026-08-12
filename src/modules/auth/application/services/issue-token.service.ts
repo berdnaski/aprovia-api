@@ -5,7 +5,7 @@ import { ITokensRepository } from '../../domain/tokens.repository.interface';
 import { JwtTokenService } from './jwt-token.service';
 
 interface IssueTokenOptions {
-  userId: string;
+  userId: string | null;
   type: TokenType;
   referenceId?: string | null;
   replaceExisting?: boolean;
@@ -26,7 +26,7 @@ export class IssueTokenService {
     referenceId,
     replaceExisting,
   }: IssueTokenOptions): Promise<string> {
-    if (replaceExisting) {
+    if (replaceExisting && userId) {
       await this.tokensRepository.deleteByUserAndType(userId, type);
     }
 

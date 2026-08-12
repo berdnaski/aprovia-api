@@ -45,10 +45,30 @@ export class TokensRepository implements ITokensRepository {
     return record ? TokenMapper.toDomain(record) : null;
   }
 
-  async consume(id: string): Promise<void> {
-    await this.prisma.token.update({
-      where: { id },
+  async findByValue(
+    value: string,
+    type: TokenType,
+  ): Promise<TokenEntity | null> {
+    const record = await this.prisma.token.findFirst({
+      where: { value, type },
+    });
+
+    return record ? TokenMapper.toDomain(record) : null;
+  }
+
+  async consume(id: string): Promise<boolean> {
+    const { count } = await this.prisma.token.updateMany({
+      where: { id, consumed_at: null },
       data: { consumed_at: new Date() },
+    });
+
+    return count === 1;
+  }
+
+  async release(id: string): Promise<void> {
+    await this.prisma.token.updateMany({
+      where: { id },
+      data: { consumed_at: null },
     });
   }
 
@@ -56,6 +76,22 @@ export class TokensRepository implements ITokensRepository {
     await this.prisma.token.deleteMany({
       where: { user_id: userId, type },
     });
+  }
+
+  async consumeByReferences(
+    referenceIds: string[],
+    type: TokenType,
+  ): Promise<number> {
+    if (referenceIds.length === 0) {
+      return 0;
+    }
+
+    const { count } = await this.prisma.token.updateMany({
+      where: { reference_id: { in: referenceIds }, type, consumed_at: null },
+      data: { consumed_at: new Date() },
+    });
+
+    return count;
   }
 
   async deleteExpired(): Promise<number> {

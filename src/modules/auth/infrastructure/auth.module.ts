@@ -56,6 +56,11 @@ import { TokensRepository } from './tokens.repository';
     ConfirmPasswordChangeUseCase,
     ResendVerificationUseCase,
   ],
-  exports: [JwtTokenService, IssueSessionService],
+  exports: [
+    JwtTokenService,
+    IssueSessionService,
+    IssueTokenService,
+    ITokensRepository,
+  ],
 })
 export class AuthModule {}
