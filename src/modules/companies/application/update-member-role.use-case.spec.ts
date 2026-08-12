@@ -14,6 +14,7 @@ import {
   MemberAction,
   ResponsibilityBlockerKind,
 } from '../domain/member-responsibility-guard';
+import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { MemberResponsibilityRegistry } from '../domain/services/member-responsibility.registry';
 import { FindMemberByIdUseCase } from './find-member-by-id.use-case';
 import { UpdateMemberRoleUseCase } from './update-member-role.use-case';
@@ -54,6 +55,7 @@ interface Harness {
   useCase: UpdateMemberRoleUseCase;
   updateRole: jest.Mock;
   checkGuards: jest.Mock;
+  recordAudit: jest.Mock;
 }
 
 const build = (
@@ -63,6 +65,10 @@ const build = (
 ): Harness => {
   const updateRole = jest.fn().mockResolvedValue(member);
   const checkGuards = jest.fn();
+  const recordAudit = jest.fn().mockResolvedValue(undefined);
+  const auditLogRepository = {
+    record: recordAudit,
+  } as unknown as IAuditLogRepository;
 
   const repository = {
     updateRole,
@@ -89,10 +95,12 @@ const build = (
   return {
     updateRole,
     checkGuards,
+    recordAudit,
     useCase: new UpdateMemberRoleUseCase(
       repository,
       finder,
       registry,
+      auditLogRepository,
       transactionManager,
     ),
   };
@@ -189,5 +197,24 @@ describe('UpdateMemberRoleUseCase', () => {
     await useCase.execute('member-1', 'company-1', CompanyMemberRole.APPROVER);
 
     expect(updateRole).not.toHaveBeenCalled();
+  });
+
+  it('grava MEMBER_CHANGED na trilha ao alterar a role (RF79)', async () => {
+    const { useCase, recordAudit } = build(
+      memberOf(CompanyMemberRole.APPROVER),
+      [costCenterGuard(0)],
+    );
+
+    await useCase.execute('member-1', 'company-1', CompanyMemberRole.REQUESTER);
+
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'MEMBER_CHANGED',
+        entityId: 'member-1',
+        oldData: { role: CompanyMemberRole.APPROVER },
+        newData: { role: CompanyMemberRole.REQUESTER },
+      }),
+      expect.anything(),
+    );
   });
 });

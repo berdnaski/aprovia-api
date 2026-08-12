@@ -13,6 +13,15 @@ export class LastAdminError extends ConflictError {
   }
 }
 
+export class OnboardingIncompleteError extends ConflictError {
+  constructor(pending: string[]) {
+    super(
+      'A configuração inicial da organização ainda não foi concluída, então a criação de pedidos está bloqueada',
+      { pending },
+    );
+  }
+}
+
 export class SelfManagerError extends ValidationError {
   constructor() {
     super('O membro não pode ser o próprio líder');

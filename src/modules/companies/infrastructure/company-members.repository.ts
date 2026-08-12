@@ -16,8 +16,11 @@ import { CompanyMemberMapper } from './mappers/company-member.mapper';
 export class CompanyMemberRepository implements ICompanyMemberRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateCompanyMemberData): Promise<CompanyMemberEntity> {
-    const raw = await this.prisma.companyMember.create({
+  async create(
+    data: CreateCompanyMemberData,
+    context?: TransactionContext,
+  ): Promise<CompanyMemberEntity> {
+    const raw = await prismaClient(this.prisma, context).companyMember.create({
       data: {
         user_id: data.userId,
         company_id: data.companyId,

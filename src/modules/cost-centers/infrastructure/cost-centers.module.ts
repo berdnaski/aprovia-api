@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, forwardRef, OnModuleInit } from '@nestjs/common';
 import { CompaniesModule } from 'src/modules/companies/infrastructure/companies.module';
 import { MemberResponsibilityRegistry } from 'src/modules/companies/domain/services/member-responsibility.registry';
 import { CreateCostCenterUseCase } from '../application/create-cost-center.use-case';
@@ -21,7 +21,7 @@ import { CostCentersController } from './cost-centers.controller';
 import { CostCenterRepository } from './cost-centers.repository';
 
 @Module({
-  imports: [CompaniesModule],
+  imports: [forwardRef(() => CompaniesModule)],
   controllers: [CostCentersController],
   providers: [
     { provide: ICostCenterRepository, useClass: CostCenterRepository },
