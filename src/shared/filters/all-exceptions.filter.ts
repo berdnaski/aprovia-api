@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+const SERVER_ERROR_THRESHOLD: number = HttpStatus.INTERNAL_SERVER_ERROR;
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -25,7 +27,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const payload = isHttp ? exception.getResponse() : null;
     const message = this.extractMessage(payload, status);
 
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (status >= SERVER_ERROR_THRESHOLD) {
       this.logger.error(
         `${request.method} ${request.url} — ${String(exception)}`,
         exception instanceof Error ? exception.stack : undefined,
@@ -40,11 +42,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     });
   }
 
-  private extractMessage(
-    payload: unknown,
-    status: HttpStatus,
-  ): string | string[] {
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+  private extractMessage(payload: unknown, status: number): string | string[] {
+    if (status >= SERVER_ERROR_THRESHOLD) {
       return 'Erro interno. Tente novamente em instantes.';
     }
 

@@ -42,17 +42,15 @@ export class GetBudgetConsumptionUseCase {
       throw new BudgetNotFoundForPeriodError(reference);
     }
 
-    const committedCents = await this.budgetEntryRepository.sumByBudget(
-      budget.id,
-      context,
-    );
-
-    const underReviewCents = await this.underReviewRegistry.sumFor(
-      costCenterId,
-      budget.periodStart,
-      budget.periodEnd,
-      context,
-    );
+    const [committedCents, underReviewCents] = await Promise.all([
+      this.budgetEntryRepository.sumByBudget(budget.id, context),
+      this.underReviewRegistry.sumFor(
+        costCenterId,
+        budget.periodStart,
+        budget.periodEnd,
+        context,
+      ),
+    ]);
 
     return this.budgetBalanceService.build(
       budget,

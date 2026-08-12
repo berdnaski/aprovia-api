@@ -98,25 +98,23 @@ export class CostCenterRepository implements ICostCenterRepository {
   ): Promise<CostCenterUsage> {
     const db = prismaClient(this.prisma, context);
 
-    const purchaseRequests = await db.purchaseRequest.count({
-      where: { cost_center_id: id, status: { in: OPEN_REQUEST_STATUSES } },
-    });
-
-    const budgets = await db.budget.count({ where: { cost_center_id: id } });
-
-    const linkedMembers = await db.costCenterMember.count({
-      where: { cost_center_id: id },
-    });
-
-    const children = await db.costCenter.count({ where: { parent_id: id } });
-
-    const defaultOfMembers = await db.companyMember.count({
-      where: { default_cost_center_id: id },
-    });
-
-    const approvalRules = await db.approvalRule.count({
-      where: { cost_center_id: id },
-    });
+    const [
+      purchaseRequests,
+      budgets,
+      linkedMembers,
+      children,
+      defaultOfMembers,
+      approvalRules,
+    ] = await Promise.all([
+      db.purchaseRequest.count({
+        where: { cost_center_id: id, status: { in: OPEN_REQUEST_STATUSES } },
+      }),
+      db.budget.count({ where: { cost_center_id: id } }),
+      db.costCenterMember.count({ where: { cost_center_id: id } }),
+      db.costCenter.count({ where: { parent_id: id } }),
+      db.companyMember.count({ where: { default_cost_center_id: id } }),
+      db.approvalRule.count({ where: { cost_center_id: id } }),
+    ]);
 
     return {
       purchaseRequests,
