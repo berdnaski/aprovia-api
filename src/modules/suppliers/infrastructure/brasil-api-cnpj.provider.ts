@@ -55,6 +55,10 @@ export class BrasilApiCnpjProvider implements ICnpjLookupProvider {
 
     try {
       response = await fetch(`${baseUrl}/cnpj/v1/${digits}`, {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'AprovAI/1.0',
+        },
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
