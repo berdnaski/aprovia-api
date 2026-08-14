@@ -9,6 +9,8 @@ import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.reposit
 import { addBusinessHours } from 'src/shared/domain/business-calendar';
 import { NotifyPendingApprovalUseCase } from './notify-pending-approval.use-case';
 import { SimulateRouteUseCase } from 'src/modules/approval-rules/application/simulate-route.use-case';
+import { AssessBudgetAvailabilityUseCase } from 'src/modules/budgets/application/assess-budget-availability.use-case';
+import { BudgetVerdict } from 'src/modules/budgets/domain/services/budget-balance.service';
 import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { AssertSupplierUsableUseCase } from 'src/modules/suppliers/application/assert-supplier-usable.use-case';
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
@@ -37,6 +39,7 @@ export class SubmitRequestUseCase {
     private readonly assertSupplierUsableUseCase: AssertSupplierUsableUseCase,
     private readonly simulateRouteUseCase: SimulateRouteUseCase,
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
+    private readonly assessBudgetAvailabilityUseCase: AssessBudgetAvailabilityUseCase,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly notifyPendingApprovalUseCase: NotifyPendingApprovalUseCase,
     private readonly transactionManager: ITransactionManager,
@@ -111,13 +114,15 @@ export class SubmitRequestUseCase {
       at: submittedAt,
     });
 
-    const tolerance =
-      (total * BigInt(Math.round(company.overrunTolerancePercent * 100))) /
-      10000n;
+    const assessment = await this.assessBudgetAvailabilityUseCase.execute(
+      request.costCenterId,
+      actor.companyId,
+      total,
+      submittedAt,
+    );
+
     const requiresOverride =
-      data.availableCents !== undefined
-        ? total > data.availableCents + tolerance
-        : false;
+      assessment.verdict === BudgetVerdict.REQUIRES_OVERRIDE;
 
     const reminderDueAt = addBusinessHours(submittedAt, company.reminderHours);
     const escalationDueAt = addBusinessHours(

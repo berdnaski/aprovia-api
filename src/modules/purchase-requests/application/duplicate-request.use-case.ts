@@ -29,6 +29,7 @@ export class DuplicateRequestUseCase {
     const draft = await this.createDraftUseCase.execute(
       actor.companyId,
       actor.memberId,
+      actor.role,
       {
         costCenterId: source.costCenterId,
         categoryId: source.categoryId ?? undefined,

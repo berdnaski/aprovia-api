@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AuditEventType,
+  CompanyMemberRole,
   OnboardingStep,
   Urgency,
 } from 'generated/prisma/enums';
@@ -11,6 +12,7 @@ import { FindCategoryByIdUseCase } from 'src/modules/categories/application/find
 import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { OnboardingIncompleteError } from 'src/modules/companies/domain/companies.errors';
 import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
+import { CostCenterAccessService } from 'src/modules/cost-centers/domain/services/cost-center-access.service';
 import { FindSupplierByIdUseCase } from 'src/modules/suppliers/application/find-supplier-by-id.use-case';
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { isUniqueViolation } from 'src/shared/domain/prisma-error';
@@ -32,6 +34,7 @@ export class CreateDraftUseCase {
   constructor(
     private readonly purchaseRequestRepository: IPurchaseRequestRepository,
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
+    private readonly costCenterAccessService: CostCenterAccessService,
     private readonly findCategoryByIdUseCase: FindCategoryByIdUseCase,
     private readonly findSupplierByIdUseCase: FindSupplierByIdUseCase,
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
@@ -43,6 +46,7 @@ export class CreateDraftUseCase {
   async execute(
     companyId: string,
     requesterId: string,
+    requesterRole: CompanyMemberRole,
     data: CreateDraftDto,
     actorUserId: string | null = null,
   ): Promise<PurchaseRequestEntity> {
@@ -64,6 +68,12 @@ export class CreateDraftUseCase {
         'Não é possível criar pedidos para um Centro de Custo inativo (RN13)',
       );
     }
+
+    await this.costCenterAccessService.assertCanRequest(
+      costCenter,
+      requesterId,
+      requesterRole,
+    );
 
     if (data.categoryId) {
       const category = await this.findCategoryByIdUseCase.execute(

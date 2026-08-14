@@ -15,6 +15,7 @@ import { ICostCenterMemberRepository } from '../domain/cost-center-members.repos
 import { ICostCenterRepository } from '../domain/cost-centers.repository.interface';
 import { CostCenterHierarchyService } from '../domain/services/cost-center-hierarchy.service';
 import { CostCenterManagerGuard } from '../domain/services/cost-center-manager.guard';
+import { CostCenterAccessService } from '../domain/services/cost-center-access.service';
 import { CostCenterManagerService } from '../domain/services/cost-center-manager.service';
 import { CostCenterMemberRepository } from './cost-center-members.repository';
 import { CostCentersController } from './cost-centers.controller';
@@ -32,6 +33,7 @@ import { CostCenterRepository } from './cost-centers.repository';
     CostCenterHierarchyService,
     CostCenterManagerService,
     CostCenterManagerGuard,
+    CostCenterAccessService,
     CreateCostCenterUseCase,
     ListCostCentersUseCase,
     FindCostCenterByIdUseCase,
@@ -47,6 +49,7 @@ import { CostCenterRepository } from './cost-centers.repository';
     ICostCenterRepository,
     ICostCenterMemberRepository,
     FindCostCenterByIdUseCase,
+    CostCenterAccessService,
   ],
 })
 export class CostCentersModule implements OnModuleInit {

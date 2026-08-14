@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { FindCategoryByIdUseCase } from 'src/modules/categories/application/find-category-by-id.use-case';
 import { InactiveCategoryError } from 'src/modules/categories/domain/categories.errors';
 import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
+import { CostCenterAccessService } from 'src/modules/cost-centers/domain/services/cost-center-access.service';
 import { FindSupplierByIdUseCase } from 'src/modules/suppliers/application/find-supplier-by-id.use-case';
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { PurchaseRequestEntity } from '../domain/purchase-request.entity';
@@ -18,6 +19,7 @@ export class UpdateDraftUseCase {
     private readonly purchaseRequestRepository: IPurchaseRequestRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
+    private readonly costCenterAccessService: CostCenterAccessService,
     private readonly findCategoryByIdUseCase: FindCategoryByIdUseCase,
     private readonly findSupplierByIdUseCase: FindSupplierByIdUseCase,
   ) {}
@@ -40,6 +42,12 @@ export class UpdateDraftUseCase {
           'Não é possível vincular o pedido a um Centro de Custo inativo (RN13)',
         );
       }
+
+      await this.costCenterAccessService.assertCanRequest(
+        costCenter,
+        actor.memberId,
+        actor.role,
+      );
     }
 
     if (data.categoryId) {
