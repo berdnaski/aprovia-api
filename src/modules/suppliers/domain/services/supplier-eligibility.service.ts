@@ -36,14 +36,15 @@ export function evaluateSupplier(
   if (supplier.blocked) {
     return {
       usage: SupplierUsage.BLOCKS_SUBMISSION,
-      reason: 'Fornecedor bloqueado pela organização',
+      reason:
+        'este fornecedor foi bloqueado pela empresa. Peça ao Admin Financeiro para desbloqueá-lo ou escolha outro fornecedor',
     };
   }
 
   if (UNFIT_STATUSES.includes(supplier.registrationStatus)) {
     return {
       usage: SupplierUsage.BLOCKS_SUBMISSION,
-      reason: `Situação cadastral na Receita Federal: ${STATUS_LABELS[supplier.registrationStatus]}`,
+      reason: `a situação deste CNPJ na Receita Federal está ${STATUS_LABELS[supplier.registrationStatus]}, e a empresa só pode comprar de fornecedores com CNPJ ativo`,
     };
   }
 
@@ -51,7 +52,7 @@ export function evaluateSupplier(
     return {
       usage: SupplierUsage.BLOCKS_APPROVAL,
       reason:
-        'Fornecedor pendente de validação do CNPJ na Receita Federal. O pedido pode ser criado, mas precisa da validação antes da aprovação final',
+        'o CNPJ deste fornecedor ainda não foi conferido na Receita Federal. O pedido pode ser criado, mas a validação precisa sair antes da aprovação final',
     };
   }
 

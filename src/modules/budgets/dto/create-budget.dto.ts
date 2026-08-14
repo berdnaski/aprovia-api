@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, Matches } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, Matches } from 'class-validator';
 import { BudgetPeriodType } from '../domain/services/budget-period.service';
 
 export class CreateBudgetDto {
@@ -25,9 +25,11 @@ export class CreateBudgetDto {
   periodType?: BudgetPeriodType;
 
   @ApiProperty({
+    type: String,
     example: '5000000',
     description: 'Teto de gasto do período, em centavos.',
   })
+  @IsNotEmpty({ message: 'Informe o valor do orçamento' })
   @Transform(({ value }: { value: string | number }) => BigInt(value))
   totalAmountCents: bigint;
 }

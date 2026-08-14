@@ -1,14 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {
-  ArrayMaxSize,
+import {ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
   IsOptional,
   IsUUID,
-  ValidateNested,
-} from 'class-validator';
+  ValidateNested, IsNotEmpty } from 'class-validator';
 import { ApproverType } from 'generated/prisma/enums';
 
 const toBigInt = ({
@@ -22,6 +20,7 @@ export class ApprovalRuleRangeDto {
     example: '0',
     description: 'Início da faixa em centavos. A primeira faixa começa em 0.',
   })
+  @IsNotEmpty()
   @Transform(toBigInt)
   minAmountCents: bigint;
 

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsDate, IsOptional, IsUUID } from 'class-validator';
+import { IsDate, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { RoutingResult } from '../domain/routing/routing.types';
 
 export class SimulateRouteDto {
@@ -8,6 +8,7 @@ export class SimulateRouteDto {
     example: '3000000',
     description: 'Valor do pedido em centavos.',
   })
+  @IsNotEmpty()
   @Transform(({ value }: { value: string | number }) => BigInt(value))
   amountCents: bigint;
 

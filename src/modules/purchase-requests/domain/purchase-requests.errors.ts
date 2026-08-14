@@ -8,7 +8,7 @@ import {
 export class RequestNotDraftError extends InvalidStateError {
   constructor(number: string, status: string) {
     super(
-      `O pedido ${number} não está mais em rascunho (status ${status}) e não pode ser alterado (RN38)`,
+      `O pedido ${number} já saiu do rascunho e entrou no fluxo de aprovação, por isso não pode mais ser editado. Cancele-o e crie um novo se precisar mudar algo.`,
       { number, status },
     );
   }
@@ -16,34 +16,36 @@ export class RequestNotDraftError extends InvalidStateError {
 
 export class RequestNotOwnedError extends ForbiddenError {
   constructor() {
-    super('Você só pode alterar rascunhos de sua própria autoria');
+    super('Só quem criou o rascunho pode editá-lo.');
   }
 }
 
 export class RequestNotVisibleError extends ForbiddenError {
   constructor() {
-    super('Você não tem acesso a este pedido');
+    super(
+      'Você não tem acesso a este pedido. Ele pertence a um Centro de Custo do qual você não faz parte.',
+    );
   }
 }
 
 export class RequestNumberExhaustedError extends ConflictError {
   constructor() {
     super(
-      'Não foi possível gerar um número único para o pedido. Tente novamente',
+      'Não foi possível gerar o número do pedido agora. Tente enviar novamente em alguns instantes.',
     );
   }
 }
 
 export class EmptyRequestError extends ValidationError {
   constructor() {
-    super('O pedido precisa de ao menos um item para ser submetido');
+    super('Adicione pelo menos um item ao pedido antes de enviá-lo.');
   }
 }
 
 export class FileTooLargeError extends ValidationError {
   constructor(sizeBytes: number, maxBytes: number) {
     super(
-      `Arquivo de ${Math.round(sizeBytes / 1024)} KB excede o limite de ${Math.round(maxBytes / 1024)} KB`,
+      `Este arquivo tem ${Math.round(sizeBytes / 1024)} KB e o limite é ${Math.round(maxBytes / 1024)} KB. Envie uma versão menor ou compacte o arquivo.`,
       { sizeBytes, maxBytes },
     );
   }
@@ -52,7 +54,7 @@ export class FileTooLargeError extends ValidationError {
 export class UnsupportedFileTypeError extends ValidationError {
   constructor(declaredMimeType: string) {
     super(
-      `Tipo de arquivo não suportado. A assinatura do arquivo não corresponde a um PDF ou imagem (declarado: ${declaredMimeType})`,
+      'Só é possível anexar arquivos PDF ou imagens (JPG, PNG). Converta o arquivo e tente novamente.',
       { declaredMimeType },
     );
   }
@@ -61,7 +63,7 @@ export class UnsupportedFileTypeError extends ValidationError {
 export class MimeTypeMismatchError extends ValidationError {
   constructor(declared: string, detected: string) {
     super(
-      `A extensão do arquivo não corresponde ao conteúdo: declarado ${declared}, detectado ${detected}`,
+      'O conteúdo deste arquivo não corresponde à extensão do nome dele. Abra o arquivo, confirme que está correto e salve-o novamente antes de anexar.',
       { declared, detected },
     );
   }

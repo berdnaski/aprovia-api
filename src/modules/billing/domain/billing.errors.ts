@@ -9,7 +9,7 @@ const FEATURE_LABELS: Record<string, string> = {
 export class FeatureNotInPlanError extends ForbiddenError {
   constructor(feature: string) {
     super(
-      `${FEATURE_LABELS[feature] ?? feature} não está incluída no plano contratado`,
+      `O recurso "${FEATURE_LABELS[feature] ?? feature}" não faz parte do plano atual da empresa. Faça upgrade do plano para liberá-lo.`,
       { feature },
     );
   }
@@ -18,7 +18,7 @@ export class FeatureNotInPlanError extends ForbiddenError {
 export class NoActiveSubscriptionError extends ForbiddenError {
   constructor() {
     super(
-      'A organização está sem assinatura ativa. A consulta ao histórico e a exportação seguem liberadas; criar e aprovar pedidos exige renovar o plano',
+      'A assinatura da empresa não está ativa. Consultar o histórico e exportar dados continua liberado, mas criar e aprovar pedidos exige renovar o plano.',
     );
   }
 }
@@ -26,7 +26,7 @@ export class NoActiveSubscriptionError extends ForbiddenError {
 export class MemberLimitReachedError extends ForbiddenError {
   constructor(used: number, max: number) {
     super(
-      `O plano contratado permite ${max} membro(s) e a organização já usa ${used}. Inative alguém ou faça upgrade para convidar mais pessoas`,
+      `A empresa já usa ${used} das ${max} vagas de membro do plano atual. Inative alguém que não usa mais o sistema ou faça upgrade para convidar mais pessoas.`,
       { used, max },
     );
   }
@@ -35,7 +35,7 @@ export class MemberLimitReachedError extends ForbiddenError {
 export class StorageQuotaExceededError extends ForbiddenError {
   constructor(usedBytes: bigint, maxBytes: bigint) {
     super(
-      `O armazenamento do plano foi esgotado: ${Math.round(Number(usedBytes) / 1048576)} MB de ${Math.round(Number(maxBytes) / 1048576)} MB em uso`,
+      `O espaço para anexos do plano acabou: ${Math.round(Number(usedBytes) / 1048576)} MB de ${Math.round(Number(maxBytes) / 1048576)} MB em uso. Apague anexos antigos ou faça upgrade do plano.`,
       {
         usedBytes: usedBytes.toString(),
         maxBytes: maxBytes.toString(),

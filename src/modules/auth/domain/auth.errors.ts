@@ -5,24 +5,30 @@ import {
 
 export class InvalidCredentialsError extends ValidationError {
   constructor() {
-    super('Credenciais inválidas');
+    super('E-mail ou senha incorretos. Confira os dados e tente novamente.');
   }
 }
 
 export class InvalidTokenError extends ValidationError {
   constructor() {
-    super('Token inválido ou expirado');
+    super(
+      'Este link não é mais válido: ele expirou ou já foi usado. Solicite um novo.',
+    );
   }
 }
 
 export class AccountDisabledError extends ForbiddenError {
   constructor() {
-    super('Esta conta está desativada');
+    super(
+      'Esta conta foi desativada. Fale com o Admin Financeiro da sua empresa para reativá-la.',
+    );
   }
 }
 
 export class EmailNotVerifiedError extends ForbiddenError {
   constructor() {
-    super('Confirme seu e-mail antes de acessar a plataforma');
+    super(
+      'Confirme seu e-mail para entrar. Verifique sua caixa de entrada ou solicite um novo link de confirmação.',
+    );
   }
 }

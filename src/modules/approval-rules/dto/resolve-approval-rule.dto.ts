@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 export class ResolveApprovalRuleQueryDto {
   @ApiProperty({
     example: '250000',
     description: 'Valor do pedido em centavos.',
   })
+  @IsNotEmpty()
   @Transform(({ value }: { value: string }) => BigInt(value))
   amountCents: bigint;
 

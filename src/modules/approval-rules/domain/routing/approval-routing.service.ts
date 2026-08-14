@@ -153,7 +153,7 @@ export class ApprovalRoutingService {
     );
 
     if (!eligible) {
-      throw new NoEligibleApproverError();
+      throw new NoEligibleApproverError(input.amountCents);
     }
 
     return this.assign(eligible, input);

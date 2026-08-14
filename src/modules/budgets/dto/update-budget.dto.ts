@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateBudgetDto {
   @ApiProperty({
     example: '7500000',
     description: 'Novo teto do período, em centavos.',
   })
+  @IsNotEmpty()
   @Transform(({ value }: { value: string | number }) => BigInt(value))
   totalAmountCents: bigint;
 

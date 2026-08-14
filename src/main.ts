@@ -5,8 +5,6 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
-import { DomainExceptionFilter } from './shared/filters/domain-exception.filter';
-import { PrismaExceptionFilter } from './shared/filters/prisma-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -36,11 +34,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(
-    new AllExceptionsFilter(),
-    new PrismaExceptionFilter(),
-    new DomainExceptionFilter(),
-  );
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.enableShutdownHooks();
 

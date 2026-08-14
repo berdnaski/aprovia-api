@@ -1,32 +1,39 @@
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
+import { formatCents } from 'src/shared/domain/money';
 
 export class InvalidAmountRangeError extends ValidationError {
   constructor(minAmountCents: bigint, maxAmountCents: bigint) {
-    super('O valor final da faixa deve ser maior que o inicial', {
-      minAmountCents: minAmountCents.toString(),
-      maxAmountCents: maxAmountCents.toString(),
-    });
+    super(
+      `A faixa de ${formatCents(minAmountCents)} até ${formatCents(maxAmountCents)} está invertida: o valor final precisa ser maior que o inicial.`,
+      {
+        minAmountCents: minAmountCents.toString(),
+        maxAmountCents: maxAmountCents.toString(),
+      },
+    );
   }
 }
 
 export class ApprovalMatrixEmptyError extends ValidationError {
   constructor() {
-    super('A matriz global precisa ter ao menos uma faixa');
+    super(
+      'Informe ao menos uma faixa de valor para a matriz de alçadas. Sem faixas, nenhum pedido consegue ser roteado.',
+    );
   }
 }
 
 export class ApprovalMatrixStartError extends ValidationError {
   constructor(firstMinAmountCents: bigint) {
-    super('A primeira faixa da matriz precisa começar em zero', {
-      firstMinAmountCents: firstMinAmountCents.toString(),
-    });
+    super(
+      `A primeira faixa precisa começar em R$ 0,00, mas começa em ${formatCents(firstMinAmountCents)}. Pedidos abaixo desse valor ficariam sem aprovador.`,
+      { firstMinAmountCents: firstMinAmountCents.toString() },
+    );
   }
 }
 
 export class ApprovalMatrixGapError extends ValidationError {
   constructor(previousMaxAmountCents: bigint, nextMinAmountCents: bigint) {
     super(
-      `Há um buraco na matriz entre ${previousMaxAmountCents.toString()} e ${nextMinAmountCents.toString()} centavos`,
+      `Falta cobrir os valores entre ${formatCents(previousMaxAmountCents + 1n)} e ${formatCents(nextMinAmountCents - 1n)}. Pedidos nessa faixa ficariam sem aprovador.`,
       {
         previousMaxAmountCents: previousMaxAmountCents.toString(),
         nextMinAmountCents: nextMinAmountCents.toString(),
@@ -39,7 +46,7 @@ export class ApprovalMatrixGapError extends ValidationError {
 export class ApprovalMatrixOverlapError extends ValidationError {
   constructor(previousMaxAmountCents: bigint, nextMinAmountCents: bigint) {
     super(
-      `As faixas se sobrepõem entre ${nextMinAmountCents.toString()} e ${previousMaxAmountCents.toString()} centavos`,
+      `Duas faixas cobrem os valores entre ${formatCents(nextMinAmountCents)} e ${formatCents(previousMaxAmountCents)}. Cada valor precisa pertencer a uma única faixa.`,
       {
         previousMaxAmountCents: previousMaxAmountCents.toString(),
         nextMinAmountCents: nextMinAmountCents.toString(),
@@ -51,7 +58,7 @@ export class ApprovalMatrixOverlapError extends ValidationError {
 export class ApprovalMatrixOpenRangeError extends ValidationError {
   constructor() {
     super(
-      'Apenas a última faixa da matriz pode ser sem teto, e ela é obrigatória',
+      'A última faixa precisa ficar sem teto, e apenas ela. Sem isso, pedidos de valor muito alto ficariam sem aprovador.',
     );
   }
 }
@@ -59,7 +66,7 @@ export class ApprovalMatrixOpenRangeError extends ValidationError {
 export class NoApprovalRuleError extends ValidationError {
   constructor(amountCents: bigint) {
     super(
-      `Nenhuma faixa da matriz de alçadas cobre o valor de ${amountCents.toString()} centavos`,
+      `A matriz de alçadas não cobre pedidos de ${formatCents(amountCents)}. Peça ao Admin Financeiro para completar as faixas de valor.`,
       { amountCents: amountCents.toString() },
     );
   }

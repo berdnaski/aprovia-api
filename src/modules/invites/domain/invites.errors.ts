@@ -7,7 +7,7 @@ import {
 export class DuplicatePendingInviteError extends ConflictError {
   constructor(email: string) {
     super(
-      `Já existe um convite pendente para ${email}. Reenvie o convite existente em vez de emitir outro`,
+      `${email} já tem um convite aguardando resposta. Reenvie o convite existente em vez de criar outro.`,
       { email },
     );
   }
@@ -15,20 +15,23 @@ export class DuplicatePendingInviteError extends ConflictError {
 
 export class InviteNotPendingError extends InvalidStateError {
   constructor(status: string) {
-    super(`Este convite não está mais pendente (${status})`, { status });
+    super(
+      'Este convite não está mais aguardando resposta: ele já foi aceito, cancelado ou expirou. Peça um novo convite.',
+      { status },
+    );
   }
 }
 
 export class InviteEmailMismatchError extends ForbiddenError {
   constructor() {
     super(
-      'Este convite foi emitido para outro endereço de e-mail. Entre com a conta que recebeu o convite',
+      'Este convite foi enviado para outro e-mail. Saia e entre com a conta do e-mail que recebeu o convite.',
     );
   }
 }
 
 export class AlreadyMemberError extends ConflictError {
   constructor() {
-    super('Você já faz parte desta organização');
+    super('Você já faz parte desta empresa, não precisa aceitar o convite.');
   }
 }
