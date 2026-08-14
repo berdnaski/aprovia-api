@@ -11,6 +11,10 @@ import { ApprovalRulesModule } from './modules/approval-rules/infrastructure/app
 import { BudgetsModule } from './modules/budgets/infrastructure/budgets.module';
 import { SuppliersModule } from './modules/suppliers/infrastructure/suppliers.module';
 import { CategoriesModule } from './modules/categories/infrastructure/categories.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/infrastructure/purchase-orders.module';
+import { InvoicesModule } from './modules/invoices/infrastructure/invoices.module';
+import { MatchingModule } from './modules/matching/infrastructure/matching.module';
+import { ReceiptsModule } from './modules/receipts/infrastructure/receipts.module';
 import { PurchaseRequestsModule } from './modules/purchase-requests/infrastructure/purchase-requests.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { RequestContextInterceptor } from './shared/infrastructure/http/request-context.interceptor';
@@ -47,6 +51,10 @@ import { AnalyticsModule } from './modules/analytics/infrastructure/analytics.mo
     SuppliersModule,
     CategoriesModule,
     PurchaseRequestsModule,
+    PurchaseOrdersModule,
+    ReceiptsModule,
+    InvoicesModule,
+    MatchingModule,
     InvitesModule,
     PlatformModule,
     AnalyticsModule,

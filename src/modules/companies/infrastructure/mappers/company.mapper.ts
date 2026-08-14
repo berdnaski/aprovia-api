@@ -17,6 +17,12 @@ export class CompanyMapper {
     entity.reminderHours = raw.reminder_hours;
     entity.escalationHours = raw.escalation_hours;
     entity.dualApprovalThresholdCents = raw.dual_approval_threshold_cents;
+    entity.priceTolerancePercent = raw.price_tolerance_percent.toNumber();
+    entity.quantityTolerancePercent =
+      raw.quantity_tolerance_percent.toNumber();
+    entity.requiresReceiptBeforeInvoice = raw.requires_receipt_before_invoice;
+    entity.autoReleaseOnMatch = raw.auto_release_on_match;
+    entity.poNumberPrefix = raw.po_number_prefix;
     entity.createdAt = raw.created_at;
     entity.updatedAt = raw.updated_at;
     entity.disabledAt = raw.disabled_at;
@@ -37,6 +43,11 @@ export class CompanyMapper {
       reminder_hours: entity.reminderHours,
       escalation_hours: entity.escalationHours,
       dual_approval_threshold_cents: entity.dualApprovalThresholdCents,
+      price_tolerance_percent: entity.priceTolerancePercent,
+      quantity_tolerance_percent: entity.quantityTolerancePercent,
+      requires_receipt_before_invoice: entity.requiresReceiptBeforeInvoice,
+      auto_release_on_match: entity.autoReleaseOnMatch,
+      po_number_prefix: entity.poNumberPrefix,
     };
   }
 }

@@ -10,8 +10,19 @@ import {
 } from 'class-validator';
 import { RequestStatus } from 'generated/prisma/enums';
 import { PaginationQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { RequestView } from '../application/list-requests.use-case';
 
 export class ListRequestsQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    enum: ['MINE', 'PENDING_FOR_ME', 'ALL'],
+    default: 'MINE',
+    description:
+      'MINE: pedidos que você criou. PENDING_FOR_ME: pedidos aguardando a sua decisão. ALL: tudo que você tem permissão de ver.',
+  })
+  @IsOptional()
+  @IsEnum(RequestView)
+  view?: RequestView;
+
   @ApiPropertyOptional({
     isArray: true,
     enum: [

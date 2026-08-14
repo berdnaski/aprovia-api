@@ -13,6 +13,11 @@ export class CompanyEntity {
   reminderHours: number;
   escalationHours: number;
   dualApprovalThresholdCents: bigint | null;
+  priceTolerancePercent: number;
+  quantityTolerancePercent: number;
+  requiresReceiptBeforeInvoice: boolean;
+  autoReleaseOnMatch: boolean;
+  poNumberPrefix: string;
   createdAt: Date;
   updatedAt: Date;
   disabledAt: Date | null;

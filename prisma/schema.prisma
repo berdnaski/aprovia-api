@@ -25,13 +25,13 @@ model User {
 
   tokens                Token[]
   memberships           CompanyMember[]
-  invites_sent          Invite[]           @relation("InviteSentBy")
+  invites_sent          Invite[]                 @relation("InviteSentBy")
   budgets_updated       Budget[]
   budget_entries        BudgetEntry[]
-  requests_canceled     PurchaseRequest[]  @relation("RequestCanceledBy")
-  files_uploaded        File[]             @relation("FileUploadedBy")
-  files_owned           File[]             @relation("FileOwner")
-  extractions_requested ExtractionResult[] @relation("ExtractionRequestedBy")
+  requests_canceled     PurchaseRequest[]        @relation("RequestCanceledBy")
+  files_uploaded        File[]                   @relation("FileUploadedBy")
+  files_owned           File[]                   @relation("FileOwner")
+  extractions_requested ExtractionResult[]       @relation("ExtractionRequestedBy")
   audit_logs            AuditLog[]
   notifications         Notification[]
   notification_prefs    NotificationPreference[]
@@ -90,6 +90,12 @@ model Company {
   escalation_hours              Int     @default(72)
   dual_approval_threshold_cents BigInt?
 
+  price_tolerance_percent         Decimal @default(2.00) @db.Decimal(5, 2)
+  quantity_tolerance_percent      Decimal @default(0.00) @db.Decimal(5, 2)
+  requires_receipt_before_invoice Boolean @default(true)
+  auto_release_on_match           Boolean @default(false)
+  po_number_prefix                String  @default("PO")
+
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
   disabled_at DateTime?
@@ -105,6 +111,11 @@ model Company {
   audit_logs        AuditLog[]
   notifications     Notification[]
   subscriptions     Subscription[]
+  purchase_orders   PurchaseOrder[]
+  receipts          Receipt[]
+  invoices          Invoice[]
+  match_results     MatchResult[]
+  payables          Payable[]
 
   @@map("companies")
 }
@@ -151,6 +162,14 @@ model CompanyMember {
   decisions            Decision[]         @relation("DecisionDecider")
   decisions_on_behalf  Decision[]         @relation("DecisionOnBehalfOf")
   invites_created      Invite[]           @relation("InviteManager")
+
+  issued_purchase_orders   PurchaseOrder[] @relation("PurchaseOrderIssuedBy")
+  canceled_purchase_orders PurchaseOrder[] @relation("PurchaseOrderCanceledBy")
+  receipts_registered      Receipt[]       @relation("ReceiptReceivedBy")
+  invoices_uploaded        Invoice[]       @relation("InvoiceUploadedBy")
+  invoices_rejected        Invoice[]       @relation("InvoiceRejectedBy")
+  match_results_resolved   MatchResult[]   @relation("MatchResolvedBy")
+  payables_released        Payable[]       @relation("PayableReleasedBy")
 
   @@unique([user_id, company_id])
   @@index([company_id, role])
@@ -360,6 +379,9 @@ model Supplier {
 
   company           Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
   purchase_requests PurchaseRequest[]
+  purchase_orders   PurchaseOrder[]
+  invoices          Invoice[]
+  payables          Payable[]
 
   @@unique([company_id, cnpj])
   @@index([company_id, registration_status])
@@ -442,6 +464,7 @@ model PurchaseRequest {
   approval_steps     ApprovalStep[]
   budget_entries     BudgetEntry[]
   extraction_results ExtractionResult[]
+  purchase_order     PurchaseOrder?
 
   @@unique([company_id, number])
   @@index([company_id, status])
@@ -492,6 +515,8 @@ model RequestItem {
 
   purchase_request PurchaseRequest @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
 
+  purchase_order_items PurchaseOrderItem[]
+
   @@index([purchase_request_id])
   @@map("request_items")
 }
@@ -500,6 +525,9 @@ enum FileType {
   REQUEST_ATTACHMENT
   USER_AVATAR
   COMPANY_LOGO
+  INVOICE_XML
+  INVOICE_PDF
+  RECEIPT_ATTACHMENT
 }
 
 model File {
@@ -617,6 +645,16 @@ enum AuditEventType {
   RULES_CHANGED
   BUDGET_CHANGED
   MEMBER_CHANGED
+  PO_ISSUED
+  PO_SENT
+  PO_CANCELED
+  GOODS_RECEIVED
+  INVOICE_UPLOADED
+  INVOICE_REJECTED
+  MATCH_COMPLETED
+  MATCH_OVERRIDDEN
+  PAYABLE_RELEASED
+  PAYABLE_PAID
 }
 
 model AuditLog {
@@ -654,6 +692,11 @@ enum NotificationEvent {
   ESCALATED
   BUDGET_ALERT
   MONTHLY_REPORT
+  PO_ISSUED
+  DELIVERY_OVERDUE
+  INVOICE_RECEIVED
+  MATCH_DIVERGENT
+  PAYABLE_DUE
 }
 
 model Notification {
@@ -758,4 +801,409 @@ model Subscription {
 
   @@index([company_id, status])
   @@map("subscriptions")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ISSUED
+  SENT
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CLOSED
+  CANCELED
+}
+
+model PurchaseOrder {
+  id     String @id @default(uuid())
+  number String
+
+  company_id          String
+  purchase_request_id String
+  supplier_id         String
+
+  status PurchaseOrderStatus @default(ISSUED)
+
+  total_amount_cents BigInt
+  currency           String @default("BRL")
+
+  issued_by_id String
+  issued_at    DateTime @default(now())
+
+  expected_delivery_at DateTime?
+  sent_to_supplier_at  DateTime?
+
+  delivery_address String? @db.Text
+  payment_terms    String?
+  notes            String? @db.Text
+
+  canceled_by_id String?
+  canceled_at    DateTime?
+  cancel_reason  String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company          Company         @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_request PurchaseRequest @relation(fields: [purchase_request_id], references: [id])
+  supplier         Supplier        @relation(fields: [supplier_id], references: [id])
+  issued_by        CompanyMember   @relation("PurchaseOrderIssuedBy", fields: [issued_by_id], references: [id])
+  canceled_by      CompanyMember?  @relation("PurchaseOrderCanceledBy", fields: [canceled_by_id], references: [id])
+
+  items         PurchaseOrderItem[]
+  receipts      Receipt[]
+  invoices      Invoice[]
+  match_results MatchResult[]
+
+  @@unique([company_id, number])
+  @@unique([purchase_request_id])
+  @@index([company_id, status])
+  @@index([supplier_id, issued_at])
+  @@index([company_id, expected_delivery_at])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                String  @id @default(uuid())
+  purchase_order_id String
+  request_item_id   String?
+
+  description      String
+  quantity         Decimal @db.Decimal(12, 3)
+  unit             String
+  unit_price_cents BigInt
+  total_cents      BigInt
+
+  received_quantity Decimal @default(0) @db.Decimal(12, 3)
+
+  ncm String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade)
+  request_item   RequestItem?  @relation(fields: [request_item_id], references: [id])
+
+  receipt_items     ReceiptItem[]
+  invoice_items     InvoiceItem[]
+  match_divergences MatchDivergence[]
+
+  @@index([purchase_order_id])
+  @@map("purchase_order_items")
+}
+
+enum ReceiptStatus {
+  PARTIAL
+  COMPLETE
+  REJECTED
+}
+
+model Receipt {
+  id     String @id @default(uuid())
+  number String
+
+  company_id        String
+  purchase_order_id String
+
+  received_by_id String
+  received_at    DateTime @default(now())
+
+  status         ReceiptStatus
+  has_divergence Boolean       @default(false)
+
+  notes String? @db.Text
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company        Company       @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_order PurchaseOrder @relation(fields: [purchase_order_id], references: [id])
+  received_by    CompanyMember @relation("ReceiptReceivedBy", fields: [received_by_id], references: [id])
+
+  items ReceiptItem[]
+
+  @@unique([company_id, number])
+  @@index([purchase_order_id, received_at])
+  @@index([company_id, received_at])
+  @@map("receipts")
+}
+
+model ReceiptItem {
+  id                     String @id @default(uuid())
+  receipt_id             String
+  purchase_order_item_id String
+
+  quantity          Decimal @db.Decimal(12, 3)
+  rejected_quantity Decimal @default(0) @db.Decimal(12, 3)
+  rejection_reason  String?
+
+  created_at DateTime @default(now())
+
+  receipt             Receipt           @relation(fields: [receipt_id], references: [id], onDelete: Cascade)
+  purchase_order_item PurchaseOrderItem @relation(fields: [purchase_order_item_id], references: [id])
+
+  @@index([receipt_id])
+  @@index([purchase_order_item_id])
+  @@map("receipt_items")
+}
+
+enum InvoiceParseStatus {
+  PENDING
+  PARSED
+  FAILED
+}
+
+enum InvoiceStatus {
+  RECEIVED
+  MATCHED
+  DIVERGENT
+  APPROVED
+  REJECTED
+}
+
+model Invoice {
+  id String @id @default(uuid())
+
+  company_id        String
+  purchase_order_id String?
+  supplier_id       String?
+
+  access_key String  @db.Char(44)
+  number     String
+  series     String?
+
+  issued_at DateTime
+
+  issuer_cnpj    String @db.Char(14)
+  issuer_name    String
+  recipient_cnpj String @db.Char(14)
+
+  total_amount_cents    BigInt
+  products_amount_cents BigInt @default(0)
+  freight_cents         BigInt @default(0)
+  insurance_cents       BigInt @default(0)
+  discount_cents        BigInt @default(0)
+  currency              String @default("BRL")
+
+  raw_xml      String             @db.Text
+  parse_status InvoiceParseStatus @default(PENDING)
+  parse_error  String?            @db.Text
+
+  status InvoiceStatus @default(RECEIVED)
+
+  uploaded_by_id String
+  uploaded_at    DateTime @default(now())
+
+  rejected_by_id String?
+  rejected_at    DateTime?
+  reject_reason  String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company        Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_order PurchaseOrder? @relation(fields: [purchase_order_id], references: [id])
+  supplier       Supplier?      @relation(fields: [supplier_id], references: [id])
+  uploaded_by    CompanyMember  @relation("InvoiceUploadedBy", fields: [uploaded_by_id], references: [id])
+  rejected_by    CompanyMember? @relation("InvoiceRejectedBy", fields: [rejected_by_id], references: [id])
+
+  items         InvoiceItem[]
+  taxes         InvoiceTax[]
+  match_results MatchResult[]
+  payables      Payable[]
+
+  @@unique([company_id, access_key])
+  @@index([company_id, status])
+  @@index([supplier_id, issued_at])
+  @@index([purchase_order_id])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id         String @id @default(uuid())
+  invoice_id String
+
+  purchase_order_item_id String?
+
+  sequence    Int
+  description String
+
+  ncm  String?
+  cfop String?
+
+  quantity         Decimal @db.Decimal(12, 4)
+  unit             String
+  unit_price_cents BigInt
+  total_cents      BigInt
+
+  created_at DateTime @default(now())
+
+  invoice             Invoice            @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  purchase_order_item PurchaseOrderItem? @relation(fields: [purchase_order_item_id], references: [id])
+
+  match_divergences MatchDivergence[]
+
+  @@index([invoice_id])
+  @@index([purchase_order_item_id])
+  @@map("invoice_items")
+}
+
+enum TaxKind {
+  ICMS
+  IPI
+  PIS
+  COFINS
+  ISS
+  IRRF
+  CSLL
+  INSS
+}
+
+model InvoiceTax {
+  id         String  @id @default(uuid())
+  invoice_id String
+  kind       TaxKind
+
+  base_cents   BigInt  @default(0)
+  rate         Decimal @default(0) @db.Decimal(5, 2)
+  amount_cents BigInt  @default(0)
+  withheld     Boolean @default(false)
+
+  created_at DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@unique([invoice_id, kind])
+  @@index([invoice_id])
+  @@map("invoice_taxes")
+}
+
+enum MatchStatus {
+  MATCHED
+  DIVERGENT
+  OVERRIDDEN
+  REJECTED
+}
+
+model MatchResult {
+  id String @id @default(uuid())
+
+  company_id        String
+  purchase_order_id String
+  invoice_id        String
+
+  status MatchStatus
+
+  checked_at DateTime @default(now())
+
+  price_tolerance_percent    Decimal @db.Decimal(5, 2)
+  quantity_tolerance_percent Decimal @db.Decimal(5, 2)
+
+  ordered_amount_cents  BigInt
+  received_amount_cents BigInt
+  invoiced_amount_cents BigInt
+
+  resolved_by_id  String?
+  resolved_at     DateTime?
+  resolution_note String?   @db.Text
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company        Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_order PurchaseOrder  @relation(fields: [purchase_order_id], references: [id])
+  invoice        Invoice        @relation(fields: [invoice_id], references: [id])
+  resolved_by    CompanyMember? @relation("MatchResolvedBy", fields: [resolved_by_id], references: [id])
+
+  divergences MatchDivergence[]
+
+  @@index([company_id, status])
+  @@index([invoice_id, checked_at])
+  @@index([purchase_order_id])
+  @@map("match_results")
+}
+
+enum DivergenceKind {
+  PRICE_ABOVE_ORDER
+  QUANTITY_ABOVE_RECEIVED
+  QUANTITY_ABOVE_ORDER
+  ITEM_NOT_IN_ORDER
+  ITEM_NOT_INVOICED
+  SUPPLIER_MISMATCH
+  TOTAL_MISMATCH
+}
+
+model MatchDivergence {
+  id              String         @id @default(uuid())
+  match_result_id String
+  kind            DivergenceKind
+
+  purchase_order_item_id String?
+  invoice_item_id        String?
+
+  expected_value String
+  actual_value   String
+
+  difference_cents   BigInt?
+  difference_percent Decimal? @db.Decimal(7, 2)
+
+  created_at DateTime @default(now())
+
+  match_result        MatchResult        @relation(fields: [match_result_id], references: [id], onDelete: Cascade)
+  purchase_order_item PurchaseOrderItem? @relation(fields: [purchase_order_item_id], references: [id])
+  invoice_item        InvoiceItem?       @relation(fields: [invoice_item_id], references: [id])
+
+  @@index([match_result_id])
+  @@map("match_divergences")
+}
+
+enum PayableStatus {
+  BLOCKED
+  RELEASED
+  PAID
+  CANCELED
+}
+
+enum PayableReleaseReason {
+  MATCHED
+  NO_INVOICE_REQUIRED
+}
+
+model Payable {
+  id String @id @default(uuid())
+
+  company_id  String
+  invoice_id  String?
+  supplier_id String
+
+  amount_cents BigInt
+  currency     String @default("BRL")
+
+  due_date DateTime @db.Date
+
+  status PayableStatus @default(BLOCKED)
+
+  release_reason    PayableReleaseReason?
+  proof_storage_key String?
+  release_note      String?               @db.Text
+
+  released_by_id String?
+  released_at    DateTime?
+
+  paid_at DateTime?
+
+  barcode String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company     Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  invoice     Invoice?       @relation(fields: [invoice_id], references: [id])
+  supplier    Supplier       @relation(fields: [supplier_id], references: [id])
+  released_by CompanyMember? @relation("PayableReleasedBy", fields: [released_by_id], references: [id])
+
+  @@unique([invoice_id])
+  @@index([company_id, status])
+  @@index([company_id, due_date])
+  @@index([supplier_id, due_date])
+  @@map("payables")
 }

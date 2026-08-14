@@ -15,6 +15,11 @@ export const APPROVER_ROLES = [
   CompanyMemberRole.FINANCE_ADMIN,
 ] as const;
 
+export const OPERATIONAL_ROLES = [
+  CompanyMemberRole.REQUESTER,
+  CompanyMemberRole.FINANCE_ADMIN,
+] as const;
+
 export const CurrentActor = createParamDecorator(
   (_data: unknown, context: ExecutionContext): RequestActor => {
     const { user } = context

@@ -80,6 +80,7 @@ export class PurchaseRequestsController {
     const request = await this.createDraftUseCase.execute(
       actor.companyId,
       actor.memberId,
+      actor.role,
       dto,
       actor.userId,
     );
@@ -97,9 +98,12 @@ export class PurchaseRequestsController {
   async list(
     @CurrentActor() actor: RequestActor,
     @Query() query: ListRequestsQueryDto,
-    @Query('view') view: RequestView = RequestView.MINE,
   ): Promise<PaginatedResponseDto<PurchaseRequestResponseDto>> {
-    const page = await this.listRequestsUseCase.execute(actor, view, query);
+    const page = await this.listRequestsUseCase.execute(
+      actor,
+      query.view ?? RequestView.MINE,
+      query,
+    );
     return PaginatedResponseDto.from(
       page,
       PurchaseRequestResponseDto.fromEntity,

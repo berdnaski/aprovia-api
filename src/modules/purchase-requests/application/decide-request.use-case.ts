@@ -86,7 +86,8 @@ export class DecideRequestUseCase {
 
     if (request.status !== RequestStatus.PENDING) {
       throw new InvalidStateError(
-        `O pedido ${request.number} não está aguardando decisão (status ${request.status})`,
+        `O pedido ${request.number} não está mais aguardando decisão: ele já foi finalizado ou devolvido ao solicitante.`,
+        { number: request.number, status: request.status },
       );
     }
 
@@ -95,7 +96,7 @@ export class DecideRequestUseCase {
       (data.justification ?? '').trim().length < MIN_JUSTIFICATION
     ) {
       throw new ValidationError(
-        `A justificativa é obrigatória e precisa de ao menos ${MIN_JUSTIFICATION} caracteres (RN44)`,
+        `Explique o motivo desta decisão em pelo menos ${MIN_JUSTIFICATION} caracteres. Quem criou o pedido vai ler esta justificativa.`,
       );
     }
 
@@ -103,18 +104,26 @@ export class DecideRequestUseCase {
     const step = waiting[0];
 
     if (!step) {
-      throw new InvalidStateError('Não há etapa aguardando decisão');
+      throw new InvalidStateError(
+        'Este pedido não tem nenhuma etapa aguardando decisão no momento.',
+      );
     }
 
     if (step.expectedApproverId !== actor.memberId) {
+      if (request.requesterId === actor.memberId) {
+        throw new ForbiddenError(
+          'Você criou este pedido, por isso ele foi enviado ao seu líder para aprovação. Ninguém aprova o próprio pedido.',
+        );
+      }
+
       throw new ForbiddenError(
-        'Esta etapa está atribuída a outro aprovador. Se você é substituto, a etapa precisa ter sido roteada a você na submissão',
+        'Este pedido está aguardando a decisão de outra pessoa. Acompanhe o andamento pelo histórico do pedido.',
       );
     }
 
     if (step.approverIds.includes(actor.memberId)) {
       throw new ValidationError(
-        'Você já assinou esta etapa. A dupla aprovação exige dois aprovadores distintos (RN26)',
+        'Você já aprovou esta etapa. Por ser um valor alto, ela precisa da assinatura de duas pessoas diferentes: aguarde a decisão do segundo aprovador.',
       );
     }
 

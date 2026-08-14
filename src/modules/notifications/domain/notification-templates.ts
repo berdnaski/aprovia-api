@@ -74,6 +74,36 @@ export interface NotificationParams {
     approvedCount: number;
     totalCents: string;
   };
+  PO_ISSUED: {
+    purchaseOrderId: string;
+    number: string;
+    supplierName: string;
+    totalCents: string;
+  };
+  DELIVERY_OVERDUE: {
+    purchaseOrderId: string;
+    number: string;
+    supplierName: string;
+    expectedDeliveryAt: string;
+  };
+  INVOICE_RECEIVED: {
+    invoiceId: string;
+    number: string;
+    issuerName: string;
+    totalCents: string;
+  };
+  MATCH_DIVERGENT: {
+    matchResultId: string;
+    invoiceNumber: string;
+    purchaseOrderNumber: string;
+    divergenceCount: number;
+  };
+  PAYABLE_DUE: {
+    payableId: string;
+    supplierName: string;
+    amountCents: string;
+    dueDate: string;
+  };
 }
 
 export type NotificationSpec = {
@@ -267,6 +297,68 @@ export function renderNotification(
         message: `No período foram aprovados ${approvedCount} pedidos, somando ${formatBrl(totalCents)}.`,
         link: `/cost-centers/${costCenterId}/reports?period=${period}`,
         actionLabel: 'Abrir relatório',
+      };
+    }
+
+    case NotificationEvent.PO_ISSUED: {
+      const { purchaseOrderId, number, supplierName, totalCents } =
+        spec.params;
+
+      return {
+        title: `Ordem de compra ${number} emitida`,
+        message: `A ordem de compra ${number} foi emitida para ${supplierName}, no valor de ${formatBrl(totalCents)}.`,
+        link: `/purchase-orders/${purchaseOrderId}`,
+        actionLabel: 'Ver ordem de compra',
+      };
+    }
+
+    case NotificationEvent.DELIVERY_OVERDUE: {
+      const { purchaseOrderId, number, supplierName, expectedDeliveryAt } =
+        spec.params;
+
+      return {
+        title: `Entrega atrasada — ${number}`,
+        message: `A entrega de ${supplierName} estava prevista para ${formatDate(expectedDeliveryAt)} e ainda não foi registrada. Confirme o prazo com o fornecedor.`,
+        link: `/purchase-orders/${purchaseOrderId}`,
+        actionLabel: 'Ver ordem de compra',
+      };
+    }
+
+    case NotificationEvent.INVOICE_RECEIVED: {
+      const { invoiceId, number, issuerName, totalCents } = spec.params;
+
+      return {
+        title: `Nota fiscal ${number} recebida`,
+        message: `${issuerName} enviou a nota fiscal ${number}, no valor de ${formatBrl(totalCents)}. Ela será conferida contra o pedido e o recebimento.`,
+        link: `/invoices/${invoiceId}`,
+        actionLabel: 'Ver nota fiscal',
+      };
+    }
+
+    case NotificationEvent.MATCH_DIVERGENT: {
+      const {
+        matchResultId,
+        invoiceNumber,
+        purchaseOrderNumber,
+        divergenceCount,
+      } = spec.params;
+
+      return {
+        title: `Nota ${invoiceNumber} não bateu com o pedido`,
+        message: `A conferência da nota ${invoiceNumber} contra a ordem ${purchaseOrderNumber} encontrou ${divergenceCount} divergência(s). O pagamento fica retido até alguém decidir.`,
+        link: `/match-results/${matchResultId}`,
+        actionLabel: 'Analisar divergências',
+      };
+    }
+
+    case NotificationEvent.PAYABLE_DUE: {
+      const { payableId, supplierName, amountCents, dueDate } = spec.params;
+
+      return {
+        title: `Pagamento a vencer — ${supplierName}`,
+        message: `O pagamento de ${formatBrl(amountCents)} para ${supplierName} vence em ${formatDate(dueDate)}.`,
+        link: `/payables/${payableId}`,
+        actionLabel: 'Ver conta a pagar',
       };
     }
   }
