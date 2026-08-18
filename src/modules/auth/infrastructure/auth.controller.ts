@@ -30,6 +30,7 @@ import { RegisterUseCase } from '../application/register.use-case';
 import { ResendVerificationUseCase } from '../application/resend-verification.use-case';
 import { ResetPasswordUseCase } from '../application/reset-password.use-case';
 import { VerifyEmailUseCase } from '../application/verify-email.use-case';
+import { InvalidTokenError } from '../domain/auth.errors';
 import {
   AuthMembershipDto,
   AuthResponseDto,
@@ -153,6 +154,10 @@ export class AuthController {
     const refreshToken = (request.cookies as Record<string, string>)?.[
       REFRESH_TOKEN_COOKIE
     ];
+
+    if (!refreshToken) {
+      throw new InvalidTokenError();
+    }
 
     const tokens = await this.refreshTokenUseCase.execute(refreshToken);
     return { tokens };

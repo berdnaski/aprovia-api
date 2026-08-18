@@ -18,7 +18,11 @@ export class RefreshTokenUseCase {
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
-  async execute(refreshToken: string): Promise<AuthTokenEntity> {
+  async execute(refreshToken?: string): Promise<AuthTokenEntity> {
+    if (!refreshToken) {
+      throw new InvalidTokenError();
+    }
+
     const hash = this.jwtTokenService.hashToken(refreshToken);
 
     const stored = await this.tokensRepository.findValidByValue(

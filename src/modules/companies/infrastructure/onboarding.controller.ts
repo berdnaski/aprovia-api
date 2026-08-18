@@ -80,9 +80,10 @@ export class OnboardingController {
   }
 
   @Get('cnpj/:cnpj')
-  @Roles(CompanyMemberRole.FINANCE_ADMIN)
   @ApiOperation({
     summary: 'Pré-preencher os dados da organização pelo CNPJ (RF13)',
+    description:
+      'Exige apenas estar autenticado: é consultada antes de existir empresa, quando a sessão ainda não tem papel. Devolve só dados públicos da Receita.',
   })
   @ApiResponse({ status: 200, description: 'Dados públicos da Receita' })
   async lookupCnpj(@Param('cnpj') cnpj: string): Promise<CnpjLookupOutcome> {
