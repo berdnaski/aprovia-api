@@ -41,7 +41,14 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
     const raw = await prismaClient(
       this.prisma,
       context,
-    ).companyMember.findUnique({ where: { id } });
+    ).companyMember.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, avatar_url: true },
+        },
+      },
+    });
 
     return raw ? CompanyMemberMapper.toDomain(raw) : null;
   }
@@ -63,6 +70,11 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
       where: {
         company_id: companyId,
         disabled_at: null,
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, avatar_url: true },
+        },
       },
       orderBy: { created_at: 'asc' },
     });

@@ -1,9 +1,30 @@
 import { CompanyMemberModel as PrismaCompanyMember } from 'generated/prisma/models';
 import { CompanyMemberEntity } from '../../domain/company-member.entity';
 
+type PrismaCompanyMemberWithUser = PrismaCompanyMember & {
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    avatar_url: string | null;
+  } | null;
+};
+
 export class CompanyMemberMapper {
-  static toDomain(this: void, raw: PrismaCompanyMember): CompanyMemberEntity {
+  static toDomain(
+    this: void,
+    raw: PrismaCompanyMemberWithUser,
+  ): CompanyMemberEntity {
     const entity = new CompanyMemberEntity();
+
+    if (raw.user) {
+      entity.user = {
+        id: raw.user.id,
+        name: raw.user.name,
+        email: raw.user.email,
+        avatarUrl: raw.user.avatar_url,
+      };
+    }
 
     entity.id = raw.id;
     entity.userId = raw.user_id;
