@@ -6,6 +6,7 @@ import { BudgetEntryEntity } from '../domain/budget-entry.entity';
 import {
   CreateBudgetEntryData,
   IBudgetEntryRepository,
+  ListBudgetEntriesFilter,
 } from '../domain/budget-entries.repository.interface';
 import { BudgetEntryMapper } from './mappers/budget-entry.mapper';
 
@@ -46,9 +47,25 @@ export class BudgetEntryRepository implements IBudgetEntryRepository {
     return result._sum.amount_cents ?? 0n;
   }
 
-  async listByBudget(budgetId: string): Promise<BudgetEntryEntity[]> {
+  async listByBudget(
+    budgetId: string,
+    filter?: ListBudgetEntriesFilter,
+  ): Promise<BudgetEntryEntity[]> {
+    const search = filter?.search?.trim();
+
     const records = await this.prisma.budgetEntry.findMany({
-      where: { budget_id: budgetId },
+      where: {
+        budget_id: budgetId,
+        type: filter?.type,
+        ...(search
+          ? {
+              description: {
+                contains: search,
+                mode: 'insensitive' as const,
+              },
+            }
+          : {}),
+      },
       orderBy: { occurred_at: 'asc' },
     });
 

@@ -11,6 +11,11 @@ export interface CreateBudgetEntryData {
   recordedById?: string | null;
 }
 
+export interface ListBudgetEntriesFilter {
+  type?: BudgetEntryType;
+  search?: string;
+}
+
 export abstract class IBudgetEntryRepository {
   abstract create(
     data: CreateBudgetEntryData,
@@ -22,7 +27,10 @@ export abstract class IBudgetEntryRepository {
     context?: TransactionContext,
   ): Promise<bigint>;
 
-  abstract listByBudget(budgetId: string): Promise<BudgetEntryEntity[]>;
+  abstract listByBudget(
+    budgetId: string,
+    filter?: ListBudgetEntriesFilter,
+  ): Promise<BudgetEntryEntity[]>;
 
   abstract listByPurchaseRequest(
     purchaseRequestId: string,
