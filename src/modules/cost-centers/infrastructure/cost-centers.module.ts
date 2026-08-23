@@ -7,6 +7,7 @@ import { DisableCostCenterUseCase } from '../application/disable-cost-center.use
 import { FindCostCenterByIdUseCase } from '../application/find-cost-center-by-id.use-case';
 import { LinkCostCenterMemberUseCase } from '../application/link-cost-center-member.use-case';
 import { ListCostCenterMembersUseCase } from '../application/list-cost-center-members.use-case';
+import { ListCostCentersSummaryUseCase } from '../application/list-cost-centers-summary.use-case';
 import { ListCostCentersUseCase } from '../application/list-cost-centers.use-case';
 import { TransferCostCenterManagementUseCase } from '../application/transfer-cost-center-management.use-case';
 import { UnlinkCostCenterMemberUseCase } from '../application/unlink-cost-center-member.use-case';
@@ -18,6 +19,7 @@ import { CostCenterManagerGuard } from '../domain/services/cost-center-manager.g
 import { CostCenterAccessService } from '../domain/services/cost-center-access.service';
 import { CostCenterManagerService } from '../domain/services/cost-center-manager.service';
 import { CostCenterMemberRepository } from './cost-center-members.repository';
+import { CostCenterSummaryRepository } from './cost-center-summary.repository';
 import { CostCentersController } from './cost-centers.controller';
 import { CostCenterRepository } from './cost-centers.repository';
 
@@ -34,8 +36,10 @@ import { CostCenterRepository } from './cost-centers.repository';
     CostCenterManagerService,
     CostCenterManagerGuard,
     CostCenterAccessService,
+    CostCenterSummaryRepository,
     CreateCostCenterUseCase,
     ListCostCentersUseCase,
+    ListCostCentersSummaryUseCase,
     FindCostCenterByIdUseCase,
     UpdateCostCenterUseCase,
     DisableCostCenterUseCase,

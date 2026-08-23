@@ -1,5 +1,12 @@
 import { CompanyMemberRole } from 'generated/prisma/enums';
 
+export class CompanyMemberUser {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
 export class CompanyMemberEntity {
   id: string;
   userId: string;
@@ -14,4 +21,5 @@ export class CompanyMemberEntity {
   createdAt: Date;
   updatedAt: Date;
   disabledAt: Date | null;
+  user?: CompanyMemberUser;
 }

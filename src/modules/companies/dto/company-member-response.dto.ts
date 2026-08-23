@@ -1,6 +1,20 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { CompanyMemberEntity } from '../domain/company-member.entity';
+
+export class CompanyMemberUserDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ example: 'Erick Berdnaski' })
+  name: string;
+
+  @ApiProperty({ example: 'erick@empresa.com.br' })
+  email: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  avatarUrl: string | null;
+}
 
 export class CompanyMemberResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -8,6 +22,13 @@ export class CompanyMemberResponseDto {
 
   @ApiProperty({ format: 'uuid' })
   userId: string;
+
+  @ApiPropertyOptional({
+    type: CompanyMemberUserDto,
+    description:
+      'Dados da pessoa por trás do vínculo. Presente nas rotas de listagem e detalhe.',
+  })
+  user?: CompanyMemberUserDto;
 
   @ApiProperty({ enum: ['REQUESTER', 'APPROVER', 'FINANCE_ADMIN'] })
   role: CompanyMemberRole;
@@ -37,6 +58,7 @@ export class CompanyMemberResponseDto {
     const dto = new CompanyMemberResponseDto();
     dto.id = entity.id;
     dto.userId = entity.userId;
+    dto.user = entity.user;
     dto.role = entity.role;
     dto.approvalLimitCents = entity.approvalLimitCents.toString();
     dto.defaultCostCenterId = entity.defaultCostCenterId;

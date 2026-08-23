@@ -28,6 +28,10 @@ import { DisableCostCenterUseCase } from '../application/disable-cost-center.use
 import { FindCostCenterByIdUseCase } from '../application/find-cost-center-by-id.use-case';
 import { LinkCostCenterMemberUseCase } from '../application/link-cost-center-member.use-case';
 import { ListCostCenterMembersUseCase } from '../application/list-cost-center-members.use-case';
+import {
+  CostCenterBudgetStatus,
+  ListCostCentersSummaryUseCase,
+} from '../application/list-cost-centers-summary.use-case';
 import { ListCostCentersUseCase } from '../application/list-cost-centers.use-case';
 import { TransferCostCenterManagementUseCase } from '../application/transfer-cost-center-management.use-case';
 import { UnlinkCostCenterMemberUseCase } from '../application/unlink-cost-center-member.use-case';
@@ -35,6 +39,7 @@ import { UpdateCostCenterUseCase } from '../application/update-cost-center.use-c
 import { TransferCostCenterManagementDto } from '../dto/transfer-cost-center-management.dto';
 import { CostCenterMemberResponseDto } from '../dto/cost-center-member-response.dto';
 import { CostCenterResponseDto } from '../dto/cost-center-response.dto';
+import { CostCenterSummaryResponseDto } from '../dto/cost-center-summary-response.dto';
 import { CreateCostCenterDto } from '../dto/create-cost-center.dto';
 import { LinkCostCenterMemberDto } from '../dto/link-cost-center-member.dto';
 import { UpdateCostCenterDto } from '../dto/update-cost-center.dto';
@@ -46,6 +51,7 @@ export class CostCentersController {
   constructor(
     private readonly createCostCenterUseCase: CreateCostCenterUseCase,
     private readonly listCostCentersUseCase: ListCostCentersUseCase,
+    private readonly listCostCentersSummaryUseCase: ListCostCentersSummaryUseCase,
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
     private readonly updateCostCenterUseCase: UpdateCostCenterUseCase,
     private readonly disableCostCenterUseCase: DisableCostCenterUseCase,
@@ -91,6 +97,48 @@ export class CostCentersController {
       includeDisabled,
     });
     return CostCenterResponseDto.fromEntities(costCenters);
+  }
+
+  @Get('summary')
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @ApiOperation({
+    summary: 'Listar Centros de Custo com gestor, equipe e orçamento',
+    description:
+      'Resolve em uma consulta o que a listagem precisa exibir: nome do gestor, quantidade de pessoas vinculadas, pedidos em aberto e o consumo do período vigente. Evita uma chamada por Centro de Custo na tela de listagem.',
+  })
+  @ApiQuery({ name: 'includeDisabled', required: false, type: Boolean })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Busca por nome, código ou nome do gestor.',
+  })
+  @ApiQuery({
+    name: 'managerId',
+    required: false,
+    description: 'Filtra pelos Centros de Custo de um gestor.',
+  })
+  @ApiQuery({
+    name: 'budgetStatus',
+    required: false,
+    enum: ['ALL', 'OVER_BUDGET', 'NEAR_LIMIT', 'ATTENTION', 'NO_BUDGET'],
+    description:
+      'ATTENTION reúne quem passou do teto e quem está a partir de 85% de uso.',
+  })
+  @ApiResponse({ status: 200, type: [CostCenterSummaryResponseDto] })
+  listWithSummary(
+    @CurrentCompany() companyId: string,
+    @Query('includeDisabled', new ParseBoolPipe({ optional: true }))
+    includeDisabled?: boolean,
+    @Query('search') search?: string,
+    @Query('managerId') managerId?: string,
+    @Query('budgetStatus') budgetStatus?: CostCenterBudgetStatus,
+  ): Promise<CostCenterSummaryResponseDto[]> {
+    return this.listCostCentersSummaryUseCase.execute(companyId, {
+      includeDisabled,
+      search,
+      managerId,
+      budgetStatus,
+    });
   }
 
   @Post('transfer-management')

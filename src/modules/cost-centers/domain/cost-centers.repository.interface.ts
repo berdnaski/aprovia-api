@@ -19,6 +19,8 @@ export interface UpdateCostCenterData {
 export interface ListCostCentersFilter {
   includeDisabled?: boolean;
   parentId?: string | null;
+  search?: string;
+  managerId?: string;
 }
 
 export interface CostCenterUsage {
