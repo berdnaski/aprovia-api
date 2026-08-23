@@ -56,11 +56,32 @@ export class CostCenterRepository implements ICostCenterRepository {
     companyId: string,
     filter?: ListCostCentersFilter,
   ): Promise<CostCenterEntity[]> {
+    const search = filter?.search?.trim();
+
     const records = await this.prisma.costCenter.findMany({
       where: {
         company_id: companyId,
         disabled_at: filter?.includeDisabled ? undefined : null,
         parent_id: filter?.parentId === undefined ? undefined : filter.parentId,
+        manager_id: filter?.managerId,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { code: { contains: search, mode: 'insensitive' as const } },
+                {
+                  manager: {
+                    user: {
+                      name: {
+                        contains: search,
+                        mode: 'insensitive' as const,
+                      },
+                    },
+                  },
+                },
+              ],
+            }
+          : {}),
       },
       orderBy: { name: 'asc' },
     });
