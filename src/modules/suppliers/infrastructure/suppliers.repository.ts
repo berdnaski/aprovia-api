@@ -15,6 +15,21 @@ import {
 } from '../domain/suppliers.repository.interface';
 import { SupplierMapper } from './mappers/supplier.mapper';
 
+function searchConditions(search: string): Prisma.SupplierWhereInput[] {
+  const conditions: Prisma.SupplierWhereInput[] = [
+    { legal_name: { contains: search, mode: 'insensitive' } },
+    { trade_name: { contains: search, mode: 'insensitive' } },
+  ];
+
+  const digits = search.replace(/\D/g, '');
+
+  if (digits.length > 0) {
+    conditions.push({ cnpj: { contains: digits } });
+  }
+
+  return conditions;
+}
+
 @Injectable()
 export class SupplierRepository implements ISupplierRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -76,15 +91,7 @@ export class SupplierRepository implements ISupplierRepository {
       registration_status: filter.registrationStatus,
       validation_status: filter.validationStatus,
       blocked: filter.blocked,
-      ...(filter.search
-        ? {
-            OR: [
-              { legal_name: { contains: filter.search, mode: 'insensitive' } },
-              { trade_name: { contains: filter.search, mode: 'insensitive' } },
-              { cnpj: { contains: filter.search.replace(/\D/g, '') } },
-            ],
-          }
-        : {}),
+      ...(filter.search ? { OR: searchConditions(filter.search) } : {}),
     };
 
     const [records, total] = await Promise.all([
