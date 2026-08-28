@@ -158,7 +158,7 @@ export function renderNotification(
       return {
         title: `${inviterName} convidou você para ${companyName}`,
         message: `Você foi convidado para participar de ${companyName} como ${roleLabel}. O convite expira em 72 horas.`,
-        link: `/invites/${token}`,
+        link: `/convites/${token}`,
         actionLabel: 'Aceitar convite',
       };
     }
@@ -176,7 +176,7 @@ export function renderNotification(
       return {
         title: `Pedido ${number} aguarda sua aprovação`,
         message: `${requesterName} enviou "${requestTitle}", no valor de ${formatBrl(amountCents)}. Sua decisão é a próxima etapa do fluxo.`,
-        link: `/requests/${requestId}`,
+        link: `/pedidos/${requestId}`,
         actionLabel: 'Analisar pedido',
         mailActions: approvalToken
           ? {
@@ -219,7 +219,7 @@ export function renderNotification(
         message: justification
           ? `${outcome} Justificativa: ${justification}`
           : outcome,
-        link: `/requests/${requestId}`,
+        link: `/pedidos/${requestId}`,
         actionLabel: 'Ver pedido',
       };
     }
@@ -231,7 +231,7 @@ export function renderNotification(
       return {
         title: `Pedido ${number} devolvido para ajuste`,
         message: `${deciderName} solicitou alterações em "${requestTitle}". Motivo: ${justification ?? 'não informado'}. Ajuste o pedido e submeta novamente.`,
-        link: `/requests/${requestId}`,
+        link: `/pedidos/${requestId}`,
         actionLabel: 'Ajustar pedido',
       };
     }
@@ -243,7 +243,7 @@ export function renderNotification(
       return {
         title: `Pedido ${number} está próximo do prazo`,
         message: `"${requestTitle}", no valor de ${formatBrl(amountCents)}, precisa de decisão até ${formatDateTime(dueAt)}.`,
-        link: `/requests/${requestId}`,
+        link: `/pedidos/${requestId}`,
         actionLabel: 'Decidir agora',
       };
     }
@@ -260,7 +260,7 @@ export function renderNotification(
       return {
         title: `Pedido ${number} foi escalonado`,
         message: `"${requestTitle}" ultrapassou o prazo de decisão com ${originalApproverName} e foi escalonado para ${escalatedToName}.`,
-        link: `/requests/${requestId}`,
+        link: `/pedidos/${requestId}`,
         actionLabel: 'Ver pedido',
       };
     }
@@ -278,7 +278,7 @@ export function renderNotification(
       return {
         title: `${costCenterName} atingiu ${thresholdPercent}% do orçamento`,
         message: `No período de ${formatPeriod(period)}, o orçamento de ${formatBrl(totalCents)} está com ${formatBrl(committedCents)} comprometidos.`,
-        link: `/cost-centers/${costCenterId}/budget?period=${period}`,
+        link: `/centros-de-custo/${costCenterId}`,
         actionLabel: 'Ver consumo',
       };
     }
@@ -295,19 +295,18 @@ export function renderNotification(
       return {
         title: `Relatório de ${formatPeriod(period)} — ${costCenterName}`,
         message: `No período foram aprovados ${approvedCount} pedidos, somando ${formatBrl(totalCents)}.`,
-        link: `/cost-centers/${costCenterId}/reports?period=${period}`,
+        link: `/centros-de-custo/${costCenterId}`,
         actionLabel: 'Abrir relatório',
       };
     }
 
     case NotificationEvent.PO_ISSUED: {
-      const { purchaseOrderId, number, supplierName, totalCents } =
-        spec.params;
+      const { purchaseOrderId, number, supplierName, totalCents } = spec.params;
 
       return {
         title: `Ordem de compra ${number} emitida`,
         message: `A ordem de compra ${number} foi emitida para ${supplierName}, no valor de ${formatBrl(totalCents)}.`,
-        link: `/purchase-orders/${purchaseOrderId}`,
+        link: `/ordens-de-compra/${purchaseOrderId}`,
         actionLabel: 'Ver ordem de compra',
       };
     }
@@ -319,7 +318,7 @@ export function renderNotification(
       return {
         title: `Entrega atrasada — ${number}`,
         message: `A entrega de ${supplierName} estava prevista para ${formatDate(expectedDeliveryAt)} e ainda não foi registrada. Confirme o prazo com o fornecedor.`,
-        link: `/purchase-orders/${purchaseOrderId}`,
+        link: `/ordens-de-compra/${purchaseOrderId}`,
         actionLabel: 'Ver ordem de compra',
       };
     }
@@ -330,7 +329,7 @@ export function renderNotification(
       return {
         title: `Nota fiscal ${number} recebida`,
         message: `${issuerName} enviou a nota fiscal ${number}, no valor de ${formatBrl(totalCents)}. Ela será conferida contra o pedido e o recebimento.`,
-        link: `/invoices/${invoiceId}`,
+        link: `/notas-fiscais/${invoiceId}`,
         actionLabel: 'Ver nota fiscal',
       };
     }
@@ -346,7 +345,7 @@ export function renderNotification(
       return {
         title: `Nota ${invoiceNumber} não bateu com o pedido`,
         message: `A conferência da nota ${invoiceNumber} contra a ordem ${purchaseOrderNumber} encontrou ${divergenceCount} divergência(s). O pagamento fica retido até alguém decidir.`,
-        link: `/match-results/${matchResultId}`,
+        link: `/conferencias/${matchResultId}`,
         actionLabel: 'Analisar divergências',
       };
     }
@@ -357,7 +356,7 @@ export function renderNotification(
       return {
         title: `Pagamento a vencer — ${supplierName}`,
         message: `O pagamento de ${formatBrl(amountCents)} para ${supplierName} vence em ${formatDate(dueDate)}.`,
-        link: `/payables/${payableId}`,
+        link: `/contas-a-pagar/${payableId}`,
         actionLabel: 'Ver conta a pagar',
       };
     }
