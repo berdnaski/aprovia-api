@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { XMLParser } from 'fast-xml-parser';
-import { InvoiceParseFailedError } from '../domain/invoices.errors';
+import {
+  findAccessKeyMismatches,
+  isAccessKeyWellFormed,
+} from '../domain/access-key';
+import {
+  InvoiceParseFailedError,
+  UnsupportedDocumentModelError,
+} from '../domain/invoices.errors';
 import {
   INfeParser,
   ParsedNfe,
+  ParsedNfeAuthorization,
   ParsedNfeItem,
   ParsedNfeTax,
 } from '../domain/nfe-parser.interface';
@@ -31,15 +39,31 @@ interface NfeDetNode {
   imposto?: NfeImpostoNode;
 }
 
+interface NfeProtNode {
+  infProt?: {
+    tpAmb?: string;
+    chNFe?: string;
+    dhRecbto?: string;
+    nProt?: string;
+    cStat?: string;
+    xMotivo?: string;
+  };
+}
+
 interface NfeDocument {
-  nfeProc?: { NFe?: NfeRoot };
+  nfeProc?: { NFe?: NfeRoot; protNFe?: NfeProtNode };
   NFe?: NfeRoot;
 }
 
 interface NfeRoot {
   infNFe?: {
     Id?: string;
-    ide?: { nNF?: string | number; serie?: string | number; dhEmi?: string };
+    ide?: {
+      nNF?: string | number;
+      serie?: string | number;
+      dhEmi?: string;
+      mod?: string | number;
+    };
     emit?: { CNPJ?: string; xNome?: string };
     dest?: { CNPJ?: string };
     det?: NfeDetNode | NfeDetNode[];
@@ -52,6 +76,48 @@ interface NfeRoot {
         vDesc?: string | number;
       };
     };
+  };
+}
+
+const AUTHORIZED_STATUS = '100';
+
+const SUPPORTED_MODEL = '55';
+
+const KNOWN_MODELS: Record<string, string> = {
+  '55': 'NF-e',
+  '57': 'CT-e (conhecimento de transporte)',
+  '58': 'MDF-e (manifesto de transporte)',
+  '65': 'NFC-e (cupom fiscal ao consumidor)',
+};
+
+function readAuthorization(
+  prot: NfeProtNode | undefined,
+): ParsedNfeAuthorization {
+  const info = prot?.infProt;
+
+  if (!info?.cStat) {
+    return {
+      status: 'UNVERIFIED',
+      protocolNumber: null,
+      statusCode: null,
+      reason: null,
+      receivedAt: null,
+      environment: null,
+    };
+  }
+
+  return {
+    status: info.cStat === AUTHORIZED_STATUS ? 'AUTHORIZED' : 'NOT_AUTHORIZED',
+    protocolNumber: info.nProt ?? null,
+    statusCode: info.cStat,
+    reason: info.xMotivo ?? null,
+    receivedAt: info.dhRecbto ? new Date(info.dhRecbto) : null,
+    environment:
+      info.tpAmb === '1'
+        ? 'PRODUCTION'
+        : info.tpAmb === '2'
+          ? 'HOMOLOGATION'
+          : null,
   };
 }
 
@@ -93,6 +159,18 @@ export class NfeXmlParser implements INfeParser {
       throw new InvoiceParseFailedError('emitente ou destinatário ausente');
     }
 
+    const model = String(infNFe.ide?.mod ?? accessKey.slice(20, 22));
+
+    if (model !== SUPPORTED_MODEL) {
+      const known = KNOWN_MODELS[model];
+
+      throw new UnsupportedDocumentModelError(
+        known
+          ? `este arquivo é um ${known}, e a conferência trabalha com NF-e (modelo 55)`
+          : `modelo de documento ${model} não é conferível aqui, a conferência trabalha com NF-e (modelo 55)`,
+      );
+    }
+
     const detList = Array.isArray(infNFe.det)
       ? infNFe.det
       : infNFe.det
@@ -107,11 +185,47 @@ export class NfeXmlParser implements INfeParser {
 
     const totals = infNFe.total?.ICMSTot;
 
+    const number = String(infNFe.ide?.nNF ?? '');
+    const series = infNFe.ide?.serie ? String(infNFe.ide.serie) : null;
+    const issuedAt = infNFe.ide?.dhEmi
+      ? new Date(infNFe.ide.dhEmi)
+      : new Date();
+
+    const authorization = readAuthorization(document.nfeProc?.protNFe);
+    const integrityWarnings: string[] = [];
+
+    if (!isAccessKeyWellFormed(accessKey)) {
+      integrityWarnings.push(
+        'O dígito verificador da chave de acesso não confere.',
+      );
+    }
+
+    for (const mismatch of findAccessKeyMismatches(accessKey, {
+      issuerCnpj: infNFe.emit.CNPJ,
+      number,
+      series,
+      issuedAt,
+    })) {
+      integrityWarnings.push(
+        `A chave de acesso indica ${mismatch.field} ${mismatch.fromKey}, mas o corpo da nota traz ${mismatch.fromXml}.`,
+      );
+    }
+
+    const protocolKey = document.nfeProc?.protNFe?.infProt?.chNFe;
+
+    if (protocolKey && protocolKey !== accessKey) {
+      integrityWarnings.push(
+        'A chave do protocolo de autorização não é a mesma do corpo da nota.',
+      );
+    }
+
     return {
       accessKey,
-      number: String(infNFe.ide?.nNF ?? ''),
-      series: infNFe.ide?.serie ? String(infNFe.ide.serie) : null,
-      issuedAt: infNFe.ide?.dhEmi ? new Date(infNFe.ide.dhEmi) : new Date(),
+      authorization,
+      integrityWarnings,
+      number,
+      series,
+      issuedAt,
       issuerCnpj: infNFe.emit.CNPJ,
       issuerName: infNFe.emit.xNome ?? '',
       recipientCnpj: infNFe.dest.CNPJ,
@@ -153,16 +267,19 @@ export class NfeXmlParser implements INfeParser {
 
     const taxes: ParsedNfeTax[] = [];
 
-    const icmsGroup = imposto.ICMS
-      ? Object.values(imposto.ICMS)[0]
-      : undefined;
+    const icmsGroup = imposto.ICMS ? Object.values(imposto.ICMS)[0] : undefined;
 
     if (icmsGroup) {
       taxes.push({
         kind: 'ICMS',
         baseCents: this.toCents(icmsGroup.vBC as string | number | undefined),
-        rate: this.toDecimalString(icmsGroup.pICMS as string | number | undefined, 2),
-        amountCents: this.toCents(icmsGroup.vICMS as string | number | undefined),
+        rate: this.toDecimalString(
+          icmsGroup.pICMS as string | number | undefined,
+          2,
+        ),
+        amountCents: this.toCents(
+          icmsGroup.vICMS as string | number | undefined,
+        ),
       });
     }
 

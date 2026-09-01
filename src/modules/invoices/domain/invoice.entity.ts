@@ -1,4 +1,9 @@
-import { InvoiceParseStatus, InvoiceStatus, TaxKind } from 'generated/prisma/enums';
+import { NfeAuthorizationStatus, NfeEnvironment } from 'generated/prisma/enums';
+import {
+  InvoiceParseStatus,
+  InvoiceStatus,
+  TaxKind,
+} from 'generated/prisma/enums';
 
 export class InvoiceTaxEntity {
   id: string;
@@ -43,6 +48,13 @@ export class InvoiceEntity {
   discountCents: bigint;
   currency: string;
   rawXml: string;
+  authorizationStatus: NfeAuthorizationStatus;
+  protocolNumber: string | null;
+  protocolStatusCode: string | null;
+  protocolReason: string | null;
+  protocolReceivedAt: Date | null;
+  environment: NfeEnvironment | null;
+  integrityWarnings: string[];
   parseStatus: InvoiceParseStatus;
   parseError: string | null;
   status: InvoiceStatus;

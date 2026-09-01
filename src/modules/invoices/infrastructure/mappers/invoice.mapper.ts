@@ -73,6 +73,13 @@ export class InvoiceMapper {
     entity.discountCents = raw.discount_cents;
     entity.currency = raw.currency;
     entity.rawXml = raw.raw_xml;
+    entity.authorizationStatus = raw.authorization_status;
+    entity.protocolNumber = raw.protocol_number;
+    entity.protocolStatusCode = raw.protocol_status_code;
+    entity.protocolReason = raw.protocol_reason;
+    entity.protocolReceivedAt = raw.protocol_received_at;
+    entity.environment = raw.environment;
+    entity.integrityWarnings = raw.integrity_warnings;
     entity.parseStatus = raw.parse_status;
     entity.parseError = raw.parse_error;
     entity.status = raw.status;

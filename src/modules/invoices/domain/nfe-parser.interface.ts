@@ -1,13 +1,14 @@
+export interface ParsedNfeAuthorization {
+  status: 'AUTHORIZED' | 'NOT_AUTHORIZED' | 'UNVERIFIED';
+  protocolNumber: string | null;
+  statusCode: string | null;
+  reason: string | null;
+  receivedAt: Date | null;
+  environment: 'PRODUCTION' | 'HOMOLOGATION' | null;
+}
+
 export interface ParsedNfeTax {
-  kind:
-    | 'ICMS'
-    | 'IPI'
-    | 'PIS'
-    | 'COFINS'
-    | 'ISS'
-    | 'IRRF'
-    | 'CSLL'
-    | 'INSS';
+  kind: 'ICMS' | 'IPI' | 'PIS' | 'COFINS' | 'ISS' | 'IRRF' | 'CSLL' | 'INSS';
   baseCents: bigint;
   rate: string;
   amountCents: bigint;
@@ -27,6 +28,8 @@ export interface ParsedNfeItem {
 
 export interface ParsedNfe {
   accessKey: string;
+  authorization: ParsedNfeAuthorization;
+  integrityWarnings: string[];
   number: string;
   series: string | null;
   issuedAt: Date;

@@ -61,3 +61,31 @@ export class InvoiceOrderMismatchError extends ValidationError {
     );
   }
 }
+
+export class InvoiceNotAuthorizedError extends ValidationError {
+  constructor(statusCode: string | null, reason: string | null) {
+    super(
+      reason
+        ? `Esta nota não está autorizada pela SEFAZ: ${reason}${statusCode ? ` (código ${statusCode})` : ''}. Só é possível registrar nota com autorização de uso.`
+        : 'Este arquivo não traz o protocolo de autorização da SEFAZ. Envie o XML da nota autorizada, não o arquivo de emissão.',
+      { statusCode, reason },
+    );
+  }
+}
+
+export class InvoiceHomologationError extends ValidationError {
+  constructor() {
+    super(
+      'Esta nota foi emitida no ambiente de homologação da SEFAZ, que é só para testes. Ela não tem valor fiscal e não pode virar conta a pagar.',
+    );
+  }
+}
+
+export class UnsupportedDocumentModelError extends ValidationError {
+  constructor(detail: string) {
+    super(
+      `Não dá para conferir este documento: ${detail}. Serviços, frete e cupom fiscal seguem pela liberação sem conferência.`,
+      { detail },
+    );
+  }
+}

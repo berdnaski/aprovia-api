@@ -94,6 +94,7 @@ model Company {
   quantity_tolerance_percent      Decimal @default(0.00) @db.Decimal(5, 2)
   requires_receipt_before_invoice Boolean @default(true)
   auto_release_on_match           Boolean @default(false)
+  match_required_above_cents      BigInt?
   po_number_prefix                String  @default("PO")
 
   created_at  DateTime  @default(now())
@@ -946,6 +947,17 @@ model ReceiptItem {
   @@map("receipt_items")
 }
 
+enum NfeAuthorizationStatus {
+  UNVERIFIED
+  AUTHORIZED
+  NOT_AUTHORIZED
+}
+
+enum NfeEnvironment {
+  PRODUCTION
+  HOMOLOGATION
+}
+
 enum InvoiceParseStatus {
   PENDING
   PARSED
@@ -986,7 +998,15 @@ model Invoice {
 
   raw_xml      String             @db.Text
   parse_status InvoiceParseStatus @default(PENDING)
-  parse_error  String?            @db.Text
+
+  authorization_status NfeAuthorizationStatus @default(UNVERIFIED)
+  protocol_number      String?
+  protocol_status_code String?
+  protocol_reason      String?
+  protocol_received_at DateTime?
+  environment          NfeEnvironment?
+  integrity_warnings   String[]               @default([])
+  parse_error          String?                @db.Text
 
   status InvoiceStatus @default(RECEIVED)
 
@@ -1166,6 +1186,7 @@ enum PayableStatus {
 enum PayableReleaseReason {
   MATCHED
   NO_INVOICE_REQUIRED
+  BELOW_MATCH_THRESHOLD
 }
 
 model Payable {

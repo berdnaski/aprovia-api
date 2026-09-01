@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventType, InvoiceParseStatus } from 'generated/prisma/enums';
+import {
+  AuditEventType,
+  InvoiceParseStatus,
+  NfeAuthorizationStatus,
+  NfeEnvironment,
+} from 'generated/prisma/enums';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { FindPurchaseOrderByIdUseCase } from 'src/modules/purchase-orders/application/find-purchase-order-by-id.use-case';
@@ -8,6 +13,8 @@ import { isUniqueViolation } from 'src/shared/domain/prisma-error';
 import { InvoiceEntity } from '../domain/invoice.entity';
 import {
   InvoiceAlreadyRegisteredError,
+  InvoiceHomologationError,
+  InvoiceNotAuthorizedError,
   InvoiceRecipientMismatchError,
 } from '../domain/invoices.errors';
 import { IInvoiceRepository } from '../domain/invoices.repository.interface';
@@ -33,6 +40,17 @@ export class UploadInvoiceUseCase {
 
     if (parsed.recipientCnpj !== company.cnpj) {
       throw new InvoiceRecipientMismatchError();
+    }
+
+    if (parsed.authorization.status !== 'AUTHORIZED') {
+      throw new InvoiceNotAuthorizedError(
+        parsed.authorization.statusCode,
+        parsed.authorization.reason,
+      );
+    }
+
+    if (parsed.authorization.environment === 'HOMOLOGATION') {
+      throw new InvoiceHomologationError();
     }
 
     const existing = await this.invoiceRepository.findByAccessKey(
@@ -70,6 +88,13 @@ export class UploadInvoiceUseCase {
         discountCents: parsed.discountCents,
         rawXml: xml,
         parseStatus: InvoiceParseStatus.PARSED,
+        authorizationStatus: NfeAuthorizationStatus.AUTHORIZED,
+        protocolNumber: parsed.authorization.protocolNumber,
+        protocolStatusCode: parsed.authorization.statusCode,
+        protocolReason: parsed.authorization.reason,
+        protocolReceivedAt: parsed.authorization.receivedAt,
+        environment: NfeEnvironment.PRODUCTION,
+        integrityWarnings: parsed.integrityWarnings,
         uploadedById: actor.memberId,
         items: parsed.items.map((item) => ({
           sequence: item.sequence,

@@ -112,10 +112,7 @@ describe('NfeXmlParser', () => {
   });
 
   it('rejeita uma nota sem itens', () => {
-    const withoutItems = validXml.replace(
-      /<det nItem="1">[\s\S]*?<\/det>/,
-      '',
-    );
+    const withoutItems = validXml.replace(/<det nItem="1">[\s\S]*?<\/det>/, '');
 
     expect(() => parser.parse(withoutItems)).toThrow(InvoiceParseFailedError);
   });

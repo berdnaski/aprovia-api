@@ -1,5 +1,6 @@
+import { Page } from 'src/shared/dto/pagination-query.dto';
 import { Injectable } from '@nestjs/common';
-import { InvoiceStatus } from 'generated/prisma/enums';
+import { InvoiceStatus, Prisma } from 'generated/prisma/client';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { prismaClient } from 'src/shared/infrastructure/database/prisma-transaction.manager';
 import { PrismaService } from 'src/shared/infrastructure/database/prisma.service';
@@ -7,6 +8,7 @@ import { InvoiceEntity } from '../domain/invoice.entity';
 import {
   CreateInvoiceData,
   IInvoiceRepository,
+  ListInvoicesFilter,
 } from '../domain/invoices.repository.interface';
 import { InvoiceMapper } from './mappers/invoice.mapper';
 
@@ -36,6 +38,13 @@ export class InvoiceRepository implements IInvoiceRepository {
         discount_cents: data.discountCents,
         raw_xml: data.rawXml,
         parse_status: data.parseStatus,
+        authorization_status: data.authorizationStatus,
+        protocol_number: data.protocolNumber,
+        protocol_status_code: data.protocolStatusCode,
+        protocol_reason: data.protocolReason,
+        protocol_received_at: data.protocolReceivedAt,
+        environment: data.environment,
+        integrity_warnings: data.integrityWarnings,
         uploaded_by_id: data.uploadedById,
         items: {
           create: data.items.map((item) => ({
@@ -78,11 +87,43 @@ export class InvoiceRepository implements IInvoiceRepository {
     accessKey: string,
   ): Promise<InvoiceEntity | null> {
     const raw = await this.prisma.invoice.findUnique({
-      where: { company_id_access_key: { company_id: companyId, access_key: accessKey } },
+      where: {
+        company_id_access_key: { company_id: companyId, access_key: accessKey },
+      },
       include: INCLUDE,
     });
 
     return raw ? InvoiceMapper.toDomain(raw) : null;
+  }
+
+  async list(filter: ListInvoicesFilter): Promise<Page<InvoiceEntity>> {
+    const where: Prisma.InvoiceWhereInput = {
+      company_id: filter.companyId,
+      ...(filter.status?.length && { status: { in: filter.status } }),
+      ...(filter.supplierId && { supplier_id: filter.supplierId }),
+      ...(filter.unlinkedOnly && { purchase_order_id: null }),
+      ...(filter.search && {
+        number: { contains: filter.search, mode: 'insensitive' as const },
+      }),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where,
+        include: INCLUDE,
+        orderBy: { issued_at: 'desc' },
+        skip: filter.skip,
+        take: filter.take,
+      }),
+      this.prisma.invoice.count({ where }),
+    ]);
+
+    return {
+      items: rows.map(InvoiceMapper.toDomain),
+      total,
+      page: filter.page,
+      perPage: filter.perPage,
+    };
   }
 
   async listByOrder(purchaseOrderId: string): Promise<InvoiceEntity[]> {

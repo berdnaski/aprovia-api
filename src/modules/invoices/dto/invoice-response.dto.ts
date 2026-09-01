@@ -1,5 +1,10 @@
+import { NfeAuthorizationStatus, NfeEnvironment } from 'generated/prisma/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { InvoiceParseStatus, InvoiceStatus, TaxKind } from 'generated/prisma/enums';
+import {
+  InvoiceParseStatus,
+  InvoiceStatus,
+  TaxKind,
+} from 'generated/prisma/enums';
 import {
   InvoiceEntity,
   InvoiceItemEntity,
@@ -126,6 +131,36 @@ export class InvoiceResponseDto {
   @ApiPropertyOptional({ nullable: true, type: String })
   rejectReason: string | null;
 
+  @ApiProperty({
+    enum: ['UNVERIFIED', 'AUTHORIZED', 'NOT_AUTHORIZED'],
+    description: 'Lido do protocolo da SEFAZ embutido no próprio XML.',
+  })
+  authorizationStatus: NfeAuthorizationStatus;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  protocolNumber: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  protocolReason: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: Date })
+  protocolReceivedAt: Date | null;
+
+  @ApiPropertyOptional({
+    enum: ['PRODUCTION', 'HOMOLOGATION'],
+    nullable: true,
+    description: 'Homologação é ambiente de teste e não tem valor fiscal.',
+  })
+  environment: NfeEnvironment | null;
+
+  @ApiProperty({
+    isArray: true,
+    type: String,
+    description:
+      'Inconsistências entre a chave de acesso e o corpo da nota. Não bloqueiam, mas pedem conferência.',
+  })
+  integrityWarnings: string[];
+
   @ApiPropertyOptional({ type: [InvoiceItemResponseDto] })
   items?: InvoiceItemResponseDto[];
 
@@ -148,6 +183,12 @@ export class InvoiceResponseDto {
     dto.parseStatus = entity.parseStatus;
     dto.status = entity.status;
     dto.rejectReason = entity.rejectReason;
+    dto.authorizationStatus = entity.authorizationStatus;
+    dto.protocolNumber = entity.protocolNumber;
+    dto.protocolReason = entity.protocolReason;
+    dto.protocolReceivedAt = entity.protocolReceivedAt;
+    dto.environment = entity.environment;
+    dto.integrityWarnings = entity.integrityWarnings;
 
     if (entity.items) {
       dto.items = entity.items.map(InvoiceItemResponseDto.fromEntity);

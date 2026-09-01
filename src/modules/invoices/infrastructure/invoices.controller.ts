@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import {
   Body,
   Controller,
@@ -5,6 +6,9 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -27,9 +31,11 @@ import { Roles } from 'src/shared/decorators/roles.decorator';
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { FindInvoiceByIdUseCase } from '../application/find-invoice-by-id.use-case';
 import { LinkInvoiceToOrderUseCase } from '../application/link-invoice-to-order.use-case';
-import { ListInvoicesUseCase } from '../application/list-invoices.use-case';
 import { RejectInvoiceUseCase } from '../application/reject-invoice.use-case';
 import { UploadInvoiceUseCase } from '../application/upload-invoice.use-case';
+import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
+import { ListInvoicesQueryDto } from '../dto/list-invoices-query.dto';
+import { ListInvoicesUseCase } from '../application/list-invoices.use-case';
 import { InvoiceResponseDto } from '../dto/invoice-response.dto';
 import { LinkInvoiceDto } from '../dto/link-invoice.dto';
 import { RejectInvoiceDto } from '../dto/reject-invoice.dto';
@@ -47,6 +53,7 @@ const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_SIZE_BYTES ?? 10485760);
 @Controller('invoices')
 export class InvoicesController {
   constructor(
+    private readonly listInvoicesUseCase: ListInvoicesUseCase,
     private readonly uploadInvoiceUseCase: UploadInvoiceUseCase,
     private readonly findInvoiceByIdUseCase: FindInvoiceByIdUseCase,
     private readonly linkInvoiceToOrderUseCase: LinkInvoiceToOrderUseCase,
@@ -68,7 +75,8 @@ export class InvoicesController {
     },
   })
   @ApiOperation({
-    summary: 'Enviar o XML da nota fiscal sem ordem de compra conhecida (RN56, RN57)',
+    summary:
+      'Enviar o XML da nota fiscal sem ordem de compra conhecida (RN56, RN57)',
     description:
       'Use quando ainda não se sabe a qual ordem de compra a nota pertence. Ela entra sem vínculo — use POST /invoices/:id/link depois para associá-la. Prefira POST /purchase-orders/:id/invoices/upload quando já souber a ordem.',
   })
@@ -90,6 +98,26 @@ export class InvoicesController {
     return InvoiceResponseDto.fromEntity(invoice);
   }
 
+  @Get()
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @ApiOperation({
+    summary: 'Listar as notas fiscais da empresa',
+    description:
+      'Filtra por situação, fornecedor, número, e por notas ainda sem ordem vinculada.',
+  })
+  @ApiResponse({ status: 200, type: PaginatedResponseDto })
+  async list(
+    @CurrentActor() actor: RequestActor,
+    @Query() query: ListInvoicesQueryDto,
+  ): Promise<PaginatedResponseDto<InvoiceResponseDto>> {
+    const page = await this.listInvoicesUseCase.executeForCompany(
+      actor.companyId,
+      query,
+    );
+
+    return PaginatedResponseDto.from(page, InvoiceResponseDto.fromEntity);
+  }
+
   @Get(':id')
   @Roles(...ALL_ROLES)
   @ApiOperation({ summary: 'Detalhar uma nota fiscal com itens e impostos' })
@@ -104,6 +132,32 @@ export class InvoicesController {
     );
 
     return InvoiceResponseDto.fromEntity(invoice);
+  }
+
+  @Get(':id/xml')
+  @Roles(...ALL_ROLES)
+  @ApiOperation({
+    summary: 'Baixar o XML original da nota fiscal',
+    description:
+      'Devolve o arquivo exatamente como o fornecedor enviou, para conciliação contábil e guarda fiscal.',
+  })
+  @ApiResponse({ status: 200, description: 'Arquivo XML' })
+  async downloadXml(
+    @CurrentActor() actor: RequestActor,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const invoice = await this.findInvoiceByIdUseCase.execute(
+      id,
+      actor.companyId,
+    );
+
+    response.set({
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Content-Disposition': `attachment; filename="NFe-${invoice.accessKey}.xml"`,
+    });
+
+    return new StreamableFile(Buffer.from(invoice.rawXml, 'utf-8'));
   }
 
   @Post(':id/link')
@@ -198,7 +252,7 @@ export class OrderInvoicesController {
   @Get()
   @Roles(...ALL_ROLES)
   @ApiOperation({ summary: 'Listar as notas vinculadas a uma ordem de compra' })
-  @ApiResponse({ status: 200, type: [InvoiceResponseDto] })
+  @ApiResponse({ status: 200, type: PaginatedResponseDto })
   async list(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<InvoiceResponseDto[]> {

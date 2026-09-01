@@ -1,4 +1,23 @@
-import { InvoiceParseStatus, InvoiceStatus, TaxKind } from 'generated/prisma/enums';
+import { NfeAuthorizationStatus, NfeEnvironment } from 'generated/prisma/enums';
+import { Page } from 'src/shared/dto/pagination-query.dto';
+
+export interface ListInvoicesFilter {
+  companyId: string;
+  status?: InvoiceStatus[];
+  supplierId?: string;
+  unlinkedOnly?: boolean;
+  search?: string;
+  skip: number;
+  take: number;
+  page: number;
+  perPage: number;
+}
+
+import {
+  InvoiceParseStatus,
+  InvoiceStatus,
+  TaxKind,
+} from 'generated/prisma/enums';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { InvoiceEntity } from './invoice.entity';
 
@@ -37,6 +56,13 @@ export interface CreateInvoiceData {
   insuranceCents: bigint;
   discountCents: bigint;
   rawXml: string;
+  authorizationStatus: NfeAuthorizationStatus;
+  protocolNumber: string | null;
+  protocolStatusCode: string | null;
+  protocolReason: string | null;
+  protocolReceivedAt: Date | null;
+  environment: NfeEnvironment;
+  integrityWarnings: string[];
   parseStatus: InvoiceParseStatus;
   uploadedById: string;
   items: CreateInvoiceItemData[];
@@ -57,6 +83,8 @@ export abstract class IInvoiceRepository {
   ): Promise<InvoiceEntity | null>;
 
   abstract listByOrder(purchaseOrderId: string): Promise<InvoiceEntity[]>;
+
+  abstract list(filter: ListInvoicesFilter): Promise<Page<InvoiceEntity>>;
 
   abstract updateStatus(
     id: string,
