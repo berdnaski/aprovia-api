@@ -329,7 +329,7 @@ export function renderNotification(
       return {
         title: `Nota fiscal ${number} recebida`,
         message: `${issuerName} enviou a nota fiscal ${number}, no valor de ${formatBrl(totalCents)}. Ela será conferida contra o pedido e o recebimento.`,
-        link: `/notas-fiscais/${invoiceId}`,
+        link: `/conferencia/notas/${invoiceId}`,
         actionLabel: 'Ver nota fiscal',
       };
     }
@@ -345,7 +345,7 @@ export function renderNotification(
       return {
         title: `Nota ${invoiceNumber} não bateu com o pedido`,
         message: `A conferência da nota ${invoiceNumber} contra a ordem ${purchaseOrderNumber} encontrou ${divergenceCount} divergência(s). O pagamento fica retido até alguém decidir.`,
-        link: `/conferencias/${matchResultId}`,
+        link: `/conferencia/resultado/${matchResultId}`,
         actionLabel: 'Analisar divergências',
       };
     }

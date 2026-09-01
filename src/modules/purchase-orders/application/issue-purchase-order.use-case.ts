@@ -1,3 +1,4 @@
+import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { Injectable } from '@nestjs/common';
 import { AuditEventType, RequestStatus } from 'generated/prisma/enums';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
@@ -30,6 +31,7 @@ export class IssuePurchaseOrderUseCase {
     private readonly purchaseOrderRepository: IPurchaseOrderRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
     private readonly requestItemRepository: IRequestItemRepository,
+    private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly transactionManager: ITransactionManager,
   ) {}
@@ -58,8 +60,11 @@ export class IssuePurchaseOrderUseCase {
 
     const items = await this.requestItemRepository.listByRequest(requestId);
 
+    const company = await this.findCompanyByIdUseCase.execute(actor.companyId);
+    const chosenPrefix = data.numberPrefix ?? company.poNumberPrefix;
+
     const year = new Date().getUTCFullYear();
-    const prefix = documentNumberPrefix(data.numberPrefix, year);
+    const prefix = documentNumberPrefix(chosenPrefix, year);
 
     for (let attempt = 0; attempt < MAX_NUMBER_ATTEMPTS; attempt += 1) {
       try {
@@ -73,7 +78,7 @@ export class IssuePurchaseOrderUseCase {
           const order = await this.purchaseOrderRepository.create(
             {
               companyId: actor.companyId,
-              number: nextDocumentNumber(data.numberPrefix, year, lastNumber),
+              number: nextDocumentNumber(chosenPrefix, year, lastNumber),
               purchaseRequestId: requestId,
               supplierId: request.supplierId as string,
               totalAmountCents: request.totalAmountCents,

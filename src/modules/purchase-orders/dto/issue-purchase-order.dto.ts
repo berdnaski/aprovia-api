@@ -39,10 +39,11 @@ export class IssuePurchaseOrderDto {
   @ApiPropertyOptional({
     default: 'PO',
     maxLength: 8,
-    description: 'Prefixo da numeração. Use o configurado na empresa.',
+    description:
+      'Prefixo da numeração. Omitido, usa o configurado na política da empresa.',
   })
   @IsOptional()
   @IsString()
   @MaxLength(8)
-  numberPrefix: string = 'PO';
+  numberPrefix?: string;
 }

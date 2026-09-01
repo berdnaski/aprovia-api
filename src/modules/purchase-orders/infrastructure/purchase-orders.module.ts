@@ -1,3 +1,4 @@
+import { CompaniesModule } from 'src/modules/companies/infrastructure/companies.module';
 import { Module } from '@nestjs/common';
 import { AuditModule } from 'src/modules/audit/infrastructure/audit.module';
 import { PurchaseRequestsModule } from 'src/modules/purchase-requests/infrastructure/purchase-requests.module';
@@ -15,7 +16,7 @@ import {
 import { PurchaseOrderRepository } from './purchase-orders.repository';
 
 @Module({
-  imports: [PurchaseRequestsModule, AuditModule],
+  imports: [PurchaseRequestsModule, AuditModule, CompaniesModule],
   controllers: [PurchaseOrdersController, RequestPurchaseOrderController],
   providers: [
     { provide: IPurchaseOrderRepository, useClass: PurchaseOrderRepository },
