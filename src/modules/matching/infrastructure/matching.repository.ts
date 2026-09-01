@@ -59,9 +59,7 @@ export class MatchResultRepository implements IMatchResultRepository {
     return raw ? MatchResultMapper.toDomain(raw) : null;
   }
 
-  async list(
-    filter: ListMatchResultsFilter,
-  ): Promise<Page<MatchResultEntity>> {
+  async list(filter: ListMatchResultsFilter): Promise<Page<MatchResultEntity>> {
     const where: Prisma.MatchResultWhereInput = {
       company_id: filter.companyId,
       ...(filter.status?.length && { status: { in: filter.status } }),

@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventType, InvoiceStatus, MatchStatus } from 'generated/prisma/enums';
+import {
+  AuditEventType,
+  InvoiceStatus,
+  MatchStatus,
+  PayableReleaseReason,
+  PayableStatus,
+} from 'generated/prisma/enums';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { IInvoiceRepository } from 'src/modules/invoices/domain/invoices.repository.interface';
@@ -87,7 +93,9 @@ export class RunMatchUseCase {
       (total, item) =>
         total +
         BigInt(
-          Math.round(Number(item.receivedQuantity) * Number(item.unitPriceCents)),
+          Math.round(
+            Number(item.receivedQuantity) * Number(item.unitPriceCents),
+          ),
         ),
       0n,
     );
@@ -116,12 +124,21 @@ export class RunMatchUseCase {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + DEFAULT_DUE_DAYS);
 
+      const company = await this.findCompanyByIdUseCase.execute(
+        actor.companyId,
+      );
+
       await this.payableRepository.create({
         companyId: actor.companyId,
         invoiceId: invoice.id,
         supplierId: order.supplierId,
         amountCents: invoice.totalAmountCents,
         dueDate,
+        ...(company.autoReleaseOnMatch && {
+          status: PayableStatus.RELEASED,
+          releaseReason: PayableReleaseReason.MATCHED,
+          releasedById: actor.memberId,
+        }),
       });
     }
 

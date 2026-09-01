@@ -123,8 +123,7 @@ export function runThreeWayMatch(
         invoiceItemId: invoiceItem.id,
         expectedValue: orderItem.unitPriceCents.toString(),
         actualValue: invoiceItem.unitPriceCents.toString(),
-        differenceCents:
-          invoiceItem.unitPriceCents - orderItem.unitPriceCents,
+        differenceCents: invoiceItem.unitPriceCents - orderItem.unitPriceCents,
         differencePercent: percentDifference(
           Number(invoiceItem.unitPriceCents),
           Number(orderItem.unitPriceCents),

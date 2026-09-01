@@ -1,12 +1,17 @@
 import { DivergenceKind, MatchStatus } from 'generated/prisma/enums';
-import { runThreeWayMatch, ThreeWayMatchInput } from './three-way-match.service';
+import {
+  runThreeWayMatch,
+  ThreeWayMatchInput,
+} from './three-way-match.service';
 
 const baseTolerance = {
   priceTolerancePercent: '2.00',
   quantityTolerancePercent: '0.00',
 };
 
-const orderItem = (overrides: Partial<ThreeWayMatchInput['orderedItems'][0]> = {}) => ({
+const orderItem = (
+  overrides: Partial<ThreeWayMatchInput['orderedItems'][0]> = {},
+) => ({
   id: 'item-1',
   description: 'Notebook',
   quantity: '10.000',
@@ -15,7 +20,9 @@ const orderItem = (overrides: Partial<ThreeWayMatchInput['orderedItems'][0]> = {
   ...overrides,
 });
 
-const invoiceItem = (overrides: Partial<ThreeWayMatchInput['invoicedItems'][0]> = {}) => ({
+const invoiceItem = (
+  overrides: Partial<ThreeWayMatchInput['invoicedItems'][0]> = {},
+) => ({
   id: 'inv-item-1',
   description: 'Notebook',
   quantity: '10.000',
@@ -25,7 +32,9 @@ const invoiceItem = (overrides: Partial<ThreeWayMatchInput['invoicedItems'][0]> 
   ...overrides,
 });
 
-const baseInput = (overrides: Partial<ThreeWayMatchInput> = {}): ThreeWayMatchInput => ({
+const baseInput = (
+  overrides: Partial<ThreeWayMatchInput> = {},
+): ThreeWayMatchInput => ({
   orderedItems: [orderItem()],
   invoicedItems: [invoiceItem()],
   orderSupplierId: 'supplier-1',
@@ -87,7 +96,9 @@ describe('runThreeWayMatch', () => {
   it('acusa QUANTITY_ABOVE_ORDER quando fatura mais do que foi pedido', () => {
     const result = runThreeWayMatch(
       baseInput({
-        orderedItems: [orderItem({ quantity: '10.000', receivedQuantity: '15.000' })],
+        orderedItems: [
+          orderItem({ quantity: '10.000', receivedQuantity: '15.000' }),
+        ],
         invoicedItems: [invoiceItem({ quantity: '15.000' })],
       }),
     );
@@ -112,7 +123,10 @@ describe('runThreeWayMatch', () => {
   it('acusa ITEM_NOT_INVOICED quando um item recebido não veio na nota', () => {
     const result = runThreeWayMatch(
       baseInput({
-        orderedItems: [orderItem(), orderItem({ id: 'item-2', receivedQuantity: '3.000' })],
+        orderedItems: [
+          orderItem(),
+          orderItem({ id: 'item-2', receivedQuantity: '3.000' }),
+        ],
       }),
     );
 
@@ -127,7 +141,10 @@ describe('runThreeWayMatch', () => {
   it('não acusa ITEM_NOT_INVOICED quando nada foi recebido do item ainda', () => {
     const result = runThreeWayMatch(
       baseInput({
-        orderedItems: [orderItem(), orderItem({ id: 'item-2', receivedQuantity: '0.000' })],
+        orderedItems: [
+          orderItem(),
+          orderItem({ id: 'item-2', receivedQuantity: '0.000' }),
+        ],
       }),
     );
 
@@ -147,9 +164,7 @@ describe('runThreeWayMatch', () => {
   });
 
   it('acusa TOTAL_MISMATCH quando a soma dos itens diverge do total da nota', () => {
-    const result = runThreeWayMatch(
-      baseInput({ invoiceTotalCents: 3000000n }),
-    );
+    const result = runThreeWayMatch(baseInput({ invoiceTotalCents: 3000000n }));
 
     expect(result.divergences).toContainEqual(
       expect.objectContaining({ kind: DivergenceKind.TOTAL_MISMATCH }),

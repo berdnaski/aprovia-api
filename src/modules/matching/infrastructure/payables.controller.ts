@@ -26,7 +26,6 @@ import {
 } from 'src/modules/purchase-requests/infrastructure/request-actor';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
-import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { ListPayablesUseCase } from '../application/list-payables.use-case';
 import { MarkPayableAsPaidUseCase } from '../application/mark-payable-as-paid.use-case';
 import { ReleasePayableWithoutInvoiceUseCase } from '../application/release-payable-without-invoice.use-case';
@@ -60,10 +59,7 @@ export class PayablesController {
     @CurrentActor() actor: RequestActor,
     @Query() query: ListPayablesQueryDto,
   ): Promise<PaginatedResponseDto<PayableResponseDto>> {
-    const page = await this.listPayablesUseCase.execute(
-      actor.companyId,
-      query,
-    );
+    const page = await this.listPayablesUseCase.execute(actor.companyId, query);
 
     return PaginatedResponseDto.from(page, PayableResponseDto.fromEntity);
   }
@@ -88,7 +84,9 @@ export class PayablesController {
   @Post('release-without-invoice')
   @Roles(CompanyMemberRole.FINANCE_ADMIN)
   @UseInterceptors(
-    FileInterceptor('proof', { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } }),
+    FileInterceptor('proof', {
+      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+    }),
   )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -106,7 +104,7 @@ export class PayablesController {
   @ApiOperation({
     summary: 'Liberar pagamento sem nota fiscal conferível (RN65, RN66)',
     description:
-      'Para compras sem NFe (assinatura de software, serviço no exterior). Exige perfil de Admin Financeiro e comprovante anexado.',
+      'Para compras sem NFe conferível (assinatura de software, serviço, frete, compra no exterior). Exige perfil de Admin Financeiro. O comprovante é obrigatório acima do valor definido em matchRequiredAboveCents.',
   })
   @ApiResponse({ status: 201, type: PayableResponseDto })
   async releaseWithoutInvoice(
@@ -114,10 +112,6 @@ export class PayablesController {
     @Body() dto: ReleasePayableWithoutInvoiceDto,
     @UploadedFile() proof: UploadedFileLike | undefined,
   ): Promise<PayableResponseDto> {
-    if (!proof) {
-      throw new ValidationError('Nenhum comprovante enviado no campo "proof"');
-    }
-
     const payable = await this.releasePayableWithoutInvoiceUseCase.execute(
       actor,
       dto,

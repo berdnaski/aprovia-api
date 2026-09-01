@@ -42,8 +42,7 @@ export class MatchResultMapper {
     entity.status = raw.status;
     entity.checkedAt = raw.checked_at;
     entity.priceTolerancePercent = raw.price_tolerance_percent.toString();
-    entity.quantityTolerancePercent =
-      raw.quantity_tolerance_percent.toString();
+    entity.quantityTolerancePercent = raw.quantity_tolerance_percent.toString();
     entity.orderedAmountCents = raw.ordered_amount_cents;
     entity.receivedAmountCents = raw.received_amount_cents;
     entity.invoicedAmountCents = raw.invoiced_amount_cents;

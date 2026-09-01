@@ -100,6 +100,12 @@ export class CompanyRepository implements ICompanyRepository {
         reminder_hours: data.reminderHours,
         escalation_hours: data.escalationHours,
         dual_approval_threshold_cents: data.dualApprovalThresholdCents,
+        price_tolerance_percent: data.priceTolerancePercent,
+        quantity_tolerance_percent: data.quantityTolerancePercent,
+        requires_receipt_before_invoice: data.requiresReceiptBeforeInvoice,
+        auto_release_on_match: data.autoReleaseOnMatch,
+        match_required_above_cents: data.matchRequiredAboveCents,
+        po_number_prefix: data.poNumberPrefix,
       },
     });
     return CompanyMapper.toDomain(raw);

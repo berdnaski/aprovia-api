@@ -6,6 +6,7 @@ import {
   PayableReleaseReason,
 } from 'generated/prisma/enums';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
+import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
 import { ForbiddenError } from 'src/shared/domain/errors/domain.error';
 import { detectMimeType } from 'src/shared/domain/file-signature';
@@ -30,6 +31,7 @@ export class ReleasePayableWithoutInvoiceUseCase {
     private readonly payableRepository: IPayableRepository,
     private readonly storageService: IStorageService,
     private readonly auditLogRepository: IAuditLogRepository,
+    private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
   ) {}
 
   async execute(
@@ -43,34 +45,49 @@ export class ReleasePayableWithoutInvoiceUseCase {
       );
     }
 
-    if (!proof) {
+    const company = await this.findCompanyByIdUseCase.execute(actor.companyId);
+    const amountCents = BigInt(data.amountCents);
+
+    const belowThreshold =
+      company.matchRequiredAboveCents !== null &&
+      amountCents <= company.matchRequiredAboveCents;
+
+    if (!proof && !belowThreshold) {
       throw new ProofRequiredError();
     }
 
-    const detected = detectMimeType(proof.buffer);
+    let storageKey: string | null = null;
 
-    if (!detected) {
-      throw new UnsupportedProofFileTypeError();
+    if (proof) {
+      const detected = detectMimeType(proof.buffer);
+
+      if (!detected) {
+        throw new UnsupportedProofFileTypeError();
+      }
+
+      storageKey = `companies/${actor.companyId}/payables/${randomUUID()}`;
+
+      await this.storageService.upload({
+        storageKey,
+        body: proof.buffer,
+        mimeType: detected,
+      });
     }
 
-    const storageKey = `companies/${actor.companyId}/payables/${randomUUID()}`;
-
-    await this.storageService.upload({
-      storageKey,
-      body: proof.buffer,
-      mimeType: detected,
-    });
+    const releaseReason = belowThreshold
+      ? PayableReleaseReason.BELOW_MATCH_THRESHOLD
+      : PayableReleaseReason.NO_INVOICE_REQUIRED;
 
     const payable = await this.payableRepository.create({
       companyId: actor.companyId,
       invoiceId: null,
       supplierId: data.supplierId,
-      amountCents: BigInt(data.amountCents),
+      amountCents,
       dueDate: new Date(data.dueDate),
     });
 
     const released = await this.payableRepository.release(payable.id, {
-      releaseReason: PayableReleaseReason.NO_INVOICE_REQUIRED,
+      releaseReason,
       releasedById: actor.memberId,
       proofStorageKey: storageKey,
       releaseNote: data.note,
@@ -83,7 +100,7 @@ export class ReleasePayableWithoutInvoiceUseCase {
       entityType: 'payable',
       entityId: released.id,
       newData: {
-        reason: PayableReleaseReason.NO_INVOICE_REQUIRED,
+        reason: releaseReason,
         amountCents: released.amountCents.toString(),
         note: data.note,
       },

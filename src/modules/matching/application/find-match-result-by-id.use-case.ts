@@ -5,9 +5,7 @@ import { IMatchResultRepository } from '../domain/matching.repository.interface'
 
 @Injectable()
 export class FindMatchResultByIdUseCase {
-  constructor(
-    private readonly matchResultRepository: IMatchResultRepository,
-  ) {}
+  constructor(private readonly matchResultRepository: IMatchResultRepository) {}
 
   async execute(id: string, companyId: string): Promise<MatchResultEntity> {
     const match = await this.matchResultRepository.findById(id, companyId);

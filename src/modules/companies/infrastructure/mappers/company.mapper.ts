@@ -22,6 +22,7 @@ export class CompanyMapper {
       raw.quantity_tolerance_percent.toNumber();
     entity.requiresReceiptBeforeInvoice = raw.requires_receipt_before_invoice;
     entity.autoReleaseOnMatch = raw.auto_release_on_match;
+    entity.matchRequiredAboveCents = raw.match_required_above_cents;
     entity.poNumberPrefix = raw.po_number_prefix;
     entity.createdAt = raw.created_at;
     entity.updatedAt = raw.updated_at;
@@ -47,6 +48,7 @@ export class CompanyMapper {
       quantity_tolerance_percent: entity.quantityTolerancePercent,
       requires_receipt_before_invoice: entity.requiresReceiptBeforeInvoice,
       auto_release_on_match: entity.autoReleaseOnMatch,
+      match_required_above_cents: entity.matchRequiredAboveCents,
       po_number_prefix: entity.poNumberPrefix,
     };
   }

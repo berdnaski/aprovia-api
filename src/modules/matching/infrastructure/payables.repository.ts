@@ -24,6 +24,13 @@ export class PayableRepository implements IPayableRepository {
         supplier_id: data.supplierId,
         amount_cents: data.amountCents,
         due_date: data.dueDate,
+        ...(data.status && { status: data.status }),
+        ...(data.releaseReason && { release_reason: data.releaseReason }),
+        ...(data.releasedById && {
+          released_by_id: data.releasedById,
+          released_at: new Date(),
+        }),
+        ...(data.releaseNote && { release_note: data.releaseNote }),
       },
     });
 
@@ -71,10 +78,7 @@ export class PayableRepository implements IPayableRepository {
     };
   }
 
-  async release(
-    id: string,
-    data: ReleasePayableData,
-  ): Promise<PayableEntity> {
+  async release(id: string, data: ReleasePayableData): Promise<PayableEntity> {
     const raw = await this.prisma.payable.update({
       where: { id },
       data: {

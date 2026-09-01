@@ -17,10 +17,7 @@ export class MarkPayableAsPaidUseCase {
   ) {}
 
   async execute(id: string, actor: RequestActor): Promise<PayableEntity> {
-    const payable = await this.payableRepository.findById(
-      id,
-      actor.companyId,
-    );
+    const payable = await this.payableRepository.findById(id, actor.companyId);
 
     if (!payable) {
       throw new PayableNotFoundError();

@@ -8,6 +8,10 @@ export interface CreatePayableData {
   supplierId: string;
   amountCents: bigint;
   dueDate: Date;
+  status?: PayableStatus;
+  releaseReason?: PayableReleaseReason;
+  releasedById?: string;
+  releaseNote?: string;
 }
 
 export interface ReleasePayableData {

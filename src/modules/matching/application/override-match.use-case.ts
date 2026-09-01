@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventType, InvoiceStatus, MatchStatus } from 'generated/prisma/enums';
+import {
+  AuditEventType,
+  InvoiceStatus,
+  MatchStatus,
+  PayableReleaseReason,
+  PayableStatus,
+} from 'generated/prisma/enums';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { IInvoiceRepository } from 'src/modules/invoices/domain/invoices.repository.interface';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
@@ -70,6 +76,10 @@ export class OverrideMatchUseCase {
       supplierId: invoice.supplierId as string,
       amountCents: invoice.totalAmountCents,
       dueDate,
+      status: PayableStatus.RELEASED,
+      releaseReason: PayableReleaseReason.MATCHED,
+      releasedById: actor.memberId,
+      releaseNote: note,
     });
 
     await this.auditLogRepository.record({

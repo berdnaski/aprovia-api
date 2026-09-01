@@ -6,9 +6,7 @@ import { ListMatchResultsQueryDto } from '../dto/list-match-results-query.dto';
 
 @Injectable()
 export class ListMatchResultsUseCase {
-  constructor(
-    private readonly matchResultRepository: IMatchResultRepository,
-  ) {}
+  constructor(private readonly matchResultRepository: IMatchResultRepository) {}
 
   async execute(
     companyId: string,

@@ -24,6 +24,12 @@ export interface UpdateCompanyPolicyData {
   reminderHours?: number;
   escalationHours?: number;
   dualApprovalThresholdCents?: bigint | null;
+  priceTolerancePercent?: number;
+  quantityTolerancePercent?: number;
+  requiresReceiptBeforeInvoice?: boolean;
+  autoReleaseOnMatch?: boolean;
+  matchRequiredAboveCents?: bigint | null;
+  poNumberPrefix?: string;
 }
 
 export interface CreatedCompany {

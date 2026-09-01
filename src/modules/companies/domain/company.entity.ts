@@ -17,6 +17,7 @@ export class CompanyEntity {
   quantityTolerancePercent: number;
   requiresReceiptBeforeInvoice: boolean;
   autoReleaseOnMatch: boolean;
+  matchRequiredAboveCents: bigint | null;
   poNumberPrefix: string;
   createdAt: Date;
   updatedAt: Date;
