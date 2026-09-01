@@ -17,21 +17,7 @@ export class ListAuditLogsQueryDto extends PaginationQueryDto {
   @IsUUID()
   actorId?: string;
 
-  @ApiPropertyOptional({
-    enum: [
-      'CREATED',
-      'SUBMITTED',
-      'APPROVED',
-      'REJECTED',
-      'CHANGES_REQUESTED',
-      'CANCELED',
-      'REASSIGNED',
-      'ESCALATED',
-      'RULES_CHANGED',
-      'BUDGET_CHANGED',
-      'MEMBER_CHANGED',
-    ],
-  })
+  @ApiPropertyOptional({ enum: AuditEventType })
   @IsOptional()
   @IsEnum(AuditEventType)
   eventType?: AuditEventType;
