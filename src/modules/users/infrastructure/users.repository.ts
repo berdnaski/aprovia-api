@@ -69,16 +69,24 @@ export class UserRepository implements IUserRepository {
     });
   }
 
+  async setAvatar(id: string, storageKey: string | null): Promise<UserEntity> {
+    const record = await this.prisma.user.update({
+      where: { id },
+      data: { avatar_storage_key: storageKey },
+    });
+
+    return UserMapper.toDomain(record);
+  }
+
   async updateProfile(
     id: string,
-    data: { name?: string; phone?: string | null; avatarUrl?: string | null },
+    data: { name?: string; phone?: string | null },
   ): Promise<UserEntity> {
     const record = await this.prisma.user.update({
       where: { id },
       data: {
         name: data.name,
         phone: data.phone,
-        avatar_url: data.avatarUrl,
       },
     });
 
@@ -102,7 +110,7 @@ export class UserRepository implements IUserRepository {
           name: 'Usuário removido',
           email: `deleted-${id}@anonimizado.local`,
           phone: null,
-          avatar_url: null,
+          avatar_storage_key: null,
           password_hash: null,
           disabled_at: now,
         },

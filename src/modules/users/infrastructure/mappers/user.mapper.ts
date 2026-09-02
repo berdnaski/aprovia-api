@@ -10,7 +10,7 @@ export class UserMapper {
     entity.phone = raw.phone;
     entity.passwordHash = raw.password_hash;
     entity.emailVerified = raw.email_verified;
-    entity.avatarUrl = raw.avatar_url;
+    entity.avatarStorageKey = raw.avatar_storage_key;
     entity.isSuperAdmin = raw.is_super_admin;
     entity.termsAcceptedAt = raw.terms_accepted_at;
     entity.createdAt = raw.created_at;
@@ -27,7 +27,7 @@ export class UserMapper {
       phone: entity.phone,
       password_hash: entity.passwordHash,
       email_verified: entity.emailVerified,
-      avatar_url: entity.avatarUrl,
+      avatar_storage_key: entity.avatarStorageKey,
       is_super_admin: entity.isSuperAdmin,
       terms_accepted_at: entity.termsAcceptedAt,
     };

@@ -15,7 +15,7 @@ model User {
   phone             String?
   password_hash     String?
   email_verified    Boolean   @default(false)
-  avatar_url        String?
+  avatar_storage_key String?
   is_super_admin    Boolean   @default(false)
   terms_accepted_at DateTime?
 

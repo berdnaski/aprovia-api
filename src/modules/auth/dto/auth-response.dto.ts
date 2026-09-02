@@ -27,7 +27,10 @@ export class AuthUserDto {
     dto.id = entity.id;
     dto.name = entity.name;
     dto.email = entity.email;
-    dto.avatarUrl = entity.avatarUrl;
+    dto.avatarUrl =
+        entity.avatarStorageKey === null
+          ? null
+          : `/api/users/${entity.id}/avatar`;
     dto.emailVerified = entity.emailVerified;
     dto.isSuperAdmin = entity.isSuperAdmin;
     return dto;

@@ -23,5 +23,10 @@ export abstract class IUserRepository {
     data: { name?: string; phone?: string | null; avatarUrl?: string | null },
   ): Promise<UserEntity>;
 
+  abstract setAvatar(
+    id: string,
+    storageKey: string | null,
+  ): Promise<UserEntity>;
+
   abstract anonymize(id: string): Promise<void>;
 }

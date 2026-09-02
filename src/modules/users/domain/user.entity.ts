@@ -5,7 +5,7 @@ export class UserEntity {
   phone: string | null;
   passwordHash: string | null;
   emailVerified: boolean;
-  avatarUrl: string | null;
+  avatarStorageKey: string | null;
   isSuperAdmin: boolean;
   termsAcceptedAt: Date | null;
   createdAt: Date;

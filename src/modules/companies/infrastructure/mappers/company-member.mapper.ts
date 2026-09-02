@@ -6,7 +6,7 @@ type PrismaCompanyMemberWithUser = PrismaCompanyMember & {
     id: string;
     name: string;
     email: string;
-    avatar_url: string | null;
+    avatar_storage_key: string | null;
   } | null;
 };
 
@@ -22,7 +22,10 @@ export class CompanyMemberMapper {
         id: raw.user.id,
         name: raw.user.name,
         email: raw.user.email,
-        avatarUrl: raw.user.avatar_url,
+        avatarUrl:
+          raw.user.avatar_storage_key === null
+            ? null
+            : `/api/users/${raw.user.id}/avatar`,
       };
     }
 

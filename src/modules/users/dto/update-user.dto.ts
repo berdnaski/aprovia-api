@@ -14,13 +14,4 @@ export class UpdateUserDto {
   @IsString()
   @MaxLength(20)
   phone?: string | null;
-
-  @ApiPropertyOptional({
-    example: 'https://cdn.aprovia.com/avatars/abc.png',
-    maxLength: 500,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  avatarUrl?: string | null;
 }
