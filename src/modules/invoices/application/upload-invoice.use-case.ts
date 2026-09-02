@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { linkInvoiceItems } from '../domain/item-matching';
 import {
   AuditEventType,
   InvoiceParseStatus,
@@ -69,6 +70,19 @@ export class UploadInvoiceUseCase {
         )
       : null;
 
+    const links = order?.items
+      ? linkInvoiceItems(
+          parsed.items.map((item) => ({
+            sequence: item.sequence,
+            description: item.description,
+          })),
+          order.items.map((item) => ({
+            id: item.id,
+            description: item.description,
+          })),
+        )
+      : new Map<number, string>();
+
     try {
       const invoice = await this.invoiceRepository.create({
         companyId: actor.companyId,
@@ -105,6 +119,7 @@ export class UploadInvoiceUseCase {
           unit: item.unit,
           unitPriceCents: item.unitPriceCents,
           totalCents: item.totalCents,
+          purchaseOrderItemId: links.get(item.sequence) ?? null,
         })),
         taxes: parsed.items.flatMap((item) => item.taxes),
       });

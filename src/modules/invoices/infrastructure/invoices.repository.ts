@@ -56,6 +56,7 @@ export class InvoiceRepository implements IInvoiceRepository {
             unit: item.unit,
             unit_price_cents: item.unitPriceCents,
             total_cents: item.totalCents,
+            purchase_order_item_id: item.purchaseOrderItemId,
           })),
         },
         taxes: {

@@ -30,6 +30,7 @@ export interface CreateInvoiceItemData {
   unit: string;
   unitPriceCents: bigint;
   totalCents: bigint;
+  purchaseOrderItemId: string | null;
 }
 
 export interface CreateInvoiceTaxData {
