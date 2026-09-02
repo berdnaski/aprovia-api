@@ -1,3 +1,4 @@
+import { Page } from 'src/shared/dto/pagination-query.dto';
 import { ReceiptStatus } from 'generated/prisma/enums';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { ReceiptEntity } from './receipt.entity';
@@ -21,6 +22,18 @@ export interface CreateReceiptData {
   items: CreateReceiptItemData[];
 }
 
+export interface ListReceiptsFilter {
+  companyId: string;
+  requesterId?: string;
+  purchaseOrderId?: string;
+  divergentOnly?: boolean;
+  search?: string;
+  skip: number;
+  take: number;
+  page: number;
+  perPage: number;
+}
+
 export abstract class IReceiptRepository {
   abstract create(
     data: CreateReceiptData,
@@ -33,6 +46,8 @@ export abstract class IReceiptRepository {
   ): Promise<ReceiptEntity | null>;
 
   abstract listByOrder(purchaseOrderId: string): Promise<ReceiptEntity[]>;
+
+  abstract list(filter: ListReceiptsFilter): Promise<Page<ReceiptEntity>>;
 
   abstract findLastNumber(
     companyId: string,

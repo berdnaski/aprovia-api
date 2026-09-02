@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EntitlementsService } from 'src/modules/billing/application/entitlements.service';
 import {
   AuditEventType,
   RequestStatus,
@@ -43,6 +44,7 @@ export class SubmitRequestUseCase {
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly notifyPendingApprovalUseCase: NotifyPendingApprovalUseCase,
     private readonly transactionManager: ITransactionManager,
+    private readonly entitlementsService: EntitlementsService,
   ) {}
 
   async execute(
@@ -54,6 +56,8 @@ export class SubmitRequestUseCase {
       requestId,
       actor,
     );
+
+    await this.entitlementsService.assertRequestQuota(actor.companyId);
 
     const items = await this.requestItemRepository.listByRequest(requestId);
 

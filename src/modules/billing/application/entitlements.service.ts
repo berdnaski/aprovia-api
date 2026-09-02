@@ -4,6 +4,7 @@ import {
   FeatureNotInPlanError,
   MemberLimitReachedError,
   NoActiveSubscriptionError,
+  RequestQuotaExceededError,
 } from '../domain/billing.errors';
 import {
   Entitlements,
@@ -11,13 +12,17 @@ import {
   resolveEntitlements,
 } from '../domain/entitlements';
 import { ISubscriptionRepository } from '../domain/plans.repository.interface';
-import { ISeatUsageRepository } from '../domain/seat-usage.repository.interface';
+import {
+  IRequestUsageRepository,
+  ISeatUsageRepository,
+} from '../domain/seat-usage.repository.interface';
 
 @Injectable()
 export class EntitlementsService {
   constructor(
     private readonly subscriptionRepository: ISubscriptionRepository,
     private readonly seatUsageRepository: ISeatUsageRepository,
+    private readonly requestUsageRepository: IRequestUsageRepository,
   ) {}
 
   async forCompany(
@@ -75,6 +80,45 @@ export class EntitlementsService {
 
     if (used >= entitlements.maxMembers) {
       throw new MemberLimitReachedError(used, entitlements.maxMembers);
+    }
+  }
+
+  async requestUsage(
+    companyId: string,
+  ): Promise<{ used: number; max: number | null }> {
+    const entitlements = await this.forCompany(companyId);
+
+    return {
+      used: await this.requestUsageRepository.countSubmittedThisMonth(
+        companyId,
+        new Date(),
+      ),
+      max: entitlements.maxRequestsMonth,
+    };
+  }
+
+  async assertRequestQuota(
+    companyId: string,
+    context?: TransactionContext,
+  ): Promise<void> {
+    const entitlements = await this.forCompany(companyId, context);
+
+    if (!entitlements.hasActiveSubscription) {
+      throw new NoActiveSubscriptionError();
+    }
+
+    if (entitlements.maxRequestsMonth === null) {
+      return;
+    }
+
+    const used = await this.requestUsageRepository.countSubmittedThisMonth(
+      companyId,
+      new Date(),
+      context,
+    );
+
+    if (used >= entitlements.maxRequestsMonth) {
+      throw new RequestQuotaExceededError(used, entitlements.maxRequestsMonth);
     }
   }
 }

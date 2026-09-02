@@ -16,10 +16,28 @@ export interface CreateSubscriptionData {
   contractedPriceCents: bigint | null;
 }
 
+export interface WritePlanData {
+  name: string;
+  tier: PlanTier;
+  priceCents: bigint;
+  maxMembers: number | null;
+  maxRequestsMonth: number | null;
+  maxStorageBytes: bigint | null;
+  features: string[];
+  active: boolean;
+}
+
 export abstract class IPlanRepository {
   abstract listActive(): Promise<PlanEntity[]>;
+  abstract listAll(): Promise<PlanEntity[]>;
   abstract findById(id: string): Promise<PlanEntity | null>;
   abstract findByTier(tier: PlanTier): Promise<PlanEntity | null>;
+  abstract create(data: WritePlanData): Promise<PlanEntity>;
+  abstract update(
+    id: string,
+    data: Partial<WritePlanData>,
+  ): Promise<PlanEntity>;
+  abstract countSubscriptions(planId: string): Promise<number>;
 }
 
 export abstract class ISubscriptionRepository {

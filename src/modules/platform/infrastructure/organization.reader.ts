@@ -13,6 +13,14 @@ import { OrganizationMapper } from './mappers/organization.mapper';
 export class OrganizationReader implements IOrganizationReader {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findById(companyId: string): Promise<OrganizationRecord | null> {
+    const record = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    return record ? OrganizationMapper.toDomain(record) : null;
+  }
+
   async list(
     filter: ListOrganizationsFilter,
   ): Promise<Page<OrganizationRecord>> {

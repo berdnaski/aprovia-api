@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BillingModule } from 'src/modules/billing/infrastructure/billing.module';
 import { BudgetsModule } from 'src/modules/budgets/infrastructure/budgets.module';
 import { ExportRequestsUseCase } from '../application/export-requests.use-case';
 import { GetDashboardUseCase } from '../application/get-dashboard.use-case';
@@ -10,7 +11,7 @@ import { MetricsRepository } from './metrics.repository';
 import { XlsxWriter } from './xlsx.writer';
 
 @Module({
-  imports: [BudgetsModule],
+  imports: [BillingModule, BudgetsModule],
   controllers: [AnalyticsController],
   providers: [
     { provide: IMetricsRepository, useClass: MetricsRepository },

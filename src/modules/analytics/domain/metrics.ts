@@ -54,6 +54,7 @@ export interface DashboardMetrics {
   costCenters: CostCenterCycleTime[];
   bottlenecks: ApprovalBottleneck[];
   repeated: RepeatedRequest[];
+  daily: DailyVolume[];
 }
 
 export interface MonthlyCostCenterSummary {
@@ -81,4 +82,11 @@ export function usagePercent(budget: bigint, committed: bigint): number {
   }
 
   return Number((committed * 10000n) / budget) / 100;
+}
+
+export interface DailyVolume {
+  day: Date;
+  created: number;
+  finalized: number;
+  approvedCents: bigint;
 }

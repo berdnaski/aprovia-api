@@ -62,6 +62,12 @@ export class ReceiptResponseDto {
   @ApiPropertyOptional({ type: [ReceiptItemResponseDto] })
   items?: ReceiptItemResponseDto[];
 
+  @ApiProperty({ required: false, example: 'PO-2026-0001' })
+  purchaseOrderNumber?: string;
+
+  @ApiProperty({ required: false, example: 'Ana Souza' })
+  receivedByName?: string;
+
   static fromEntity(this: void, entity: ReceiptEntity): ReceiptResponseDto {
     const dto = new ReceiptResponseDto();
 
@@ -76,6 +82,14 @@ export class ReceiptResponseDto {
 
     if (entity.items) {
       dto.items = entity.items.map(ReceiptItemResponseDto.fromEntity);
+    }
+
+    if (entity.purchaseOrderNumber) {
+      dto.purchaseOrderNumber = entity.purchaseOrderNumber;
+    }
+
+    if (entity.receivedByName) {
+      dto.receivedByName = entity.receivedByName;
     }
 
     return dto;

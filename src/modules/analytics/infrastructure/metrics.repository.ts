@@ -3,6 +3,7 @@ import { RequestStatus } from 'generated/prisma/enums';
 import { PrismaService } from 'src/shared/infrastructure/database/prisma.service';
 import {
   ApprovalBottleneck,
+  DailyVolume,
   ApproverPerformance,
   CostCenterConsumption,
   CostCenterCycleTime,
@@ -16,6 +17,13 @@ import {
   IMetricsRepository,
   MetricsWindow,
 } from '../domain/metrics.repository.interface';
+
+interface DailyVolumeRow {
+  day: Date;
+  created: number;
+  finalized: number;
+  approved_cents: bigint;
+}
 
 interface StatusRow {
   status: RequestStatus;
@@ -229,6 +237,51 @@ export class MetricsRepository implements IMetricsRepository {
       amountCents: row.amount_cents,
       occurrences: row.occurrences,
       lastAt: row.last_at,
+    }));
+  }
+
+
+  async dailyVolume(window: MetricsWindow): Promise<DailyVolume[]> {
+    const rows = await this.prisma.$queryRaw<DailyVolumeRow[]>`
+      SELECT series.day::date AS day,
+             COALESCE(created.total, 0)::int AS created,
+             COALESCE(finalized.total, 0)::int AS finalized,
+             COALESCE(finalized.approved_cents, 0)::bigint AS approved_cents
+      FROM generate_series(
+             date_trunc('day', ${window.from}::timestamptz),
+             date_trunc('day', ${window.to}::timestamptz),
+             interval '1 day'
+           ) AS series(day)
+      LEFT JOIN (
+        SELECT date_trunc('day', created_at) AS day, COUNT(*)::int AS total
+        FROM purchase_requests
+        WHERE company_id = ${window.companyId}
+          AND created_at >= ${window.from}
+          AND created_at < ${window.to}
+        GROUP BY 1
+      ) AS created ON created.day = series.day
+      LEFT JOIN (
+        SELECT date_trunc('day', finalized_at) AS day,
+               COUNT(*)::int AS total,
+               COALESCE(
+                 SUM(total_amount_cents) FILTER (WHERE status = 'APPROVED'),
+                 0
+               )::bigint AS approved_cents
+        FROM purchase_requests
+        WHERE company_id = ${window.companyId}
+          AND finalized_at IS NOT NULL
+          AND finalized_at >= ${window.from}
+          AND finalized_at < ${window.to}
+        GROUP BY 1
+      ) AS finalized ON finalized.day = series.day
+      ORDER BY series.day
+    `;
+
+    return rows.map((row) => ({
+      day: row.day,
+      created: row.created,
+      finalized: row.finalized,
+      approvedCents: row.approved_cents,
     }));
   }
 

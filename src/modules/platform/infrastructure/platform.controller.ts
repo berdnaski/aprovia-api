@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Patch,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,6 +21,10 @@ import { ListPlansUseCase } from 'src/modules/billing/application/list-plans.use
 import { PlanResponseDto } from 'src/modules/billing/dto/subscription-response.dto';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
 import { SuperAdminGuard } from 'src/shared/guards/super-admin.guard';
+import { featureLabel } from 'src/modules/billing/domain/billing.errors';
+import { PlanFeature } from 'src/modules/billing/domain/entitlements';
+import { ManagePlansUseCase } from '../application/manage-plans.use-case';
+import { FindOrganizationUseCase } from '../application/find-organization.use-case';
 import { ListOrganizationsUseCase } from '../application/list-organizations.use-case';
 import {
   AssignPlanDto,
@@ -27,6 +32,10 @@ import {
   ListOrganizationsQueryDto,
   OrganizationResponseDto,
   PlatformSubscriptionResponseDto,
+  FeatureCatalogResponseDto,
+  PlanUsageResponseDto,
+  UpdatePlanDto,
+  WritePlanDto,
 } from '../dto/platform.dto';
 
 @ApiTags('Plataforma (SuperAdmin)')
@@ -37,6 +46,8 @@ export class PlatformController {
   constructor(
     private readonly listOrganizationsUseCase: ListOrganizationsUseCase,
     private readonly listPlansUseCase: ListPlansUseCase,
+    private readonly findOrganizationUseCase: FindOrganizationUseCase,
+    private readonly managePlansUseCase: ManagePlansUseCase,
     private readonly assignPlanUseCase: AssignPlanUseCase,
     private readonly grantFeatureOverrideUseCase: GrantFeatureOverrideUseCase,
   ) {}
@@ -55,13 +66,84 @@ export class PlatformController {
     return PaginatedResponseDto.from(page, OrganizationResponseDto.fromSummary);
   }
 
+  @Get('organizations/:companyId')
+  @ApiOperation({ summary: 'Detalhar uma organização' })
+  @ApiResponse({ status: 200, type: OrganizationResponseDto })
+  @ApiResponse({ status: 404, description: 'Organização não encontrada' })
+  async organization(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+  ): Promise<OrganizationResponseDto> {
+    const summary = await this.findOrganizationUseCase.execute(companyId);
+
+    return OrganizationResponseDto.fromSummary(summary);
+  }
+
   @Get('plans')
   @ApiOperation({ summary: 'Planos comerciais cadastrados (RF81)' })
   @ApiResponse({ status: 200, type: [PlanResponseDto] })
-  async plans(): Promise<PlanResponseDto[]> {
-    const plans = await this.listPlansUseCase.execute();
+  async plans(): Promise<PlanUsageResponseDto[]> {
+    const plans = await this.managePlansUseCase.list();
 
-    return plans.map(PlanResponseDto.fromEntity);
+    return plans.map((plan) => ({
+      ...PlanResponseDto.fromEntity(plan),
+      active: plan.active,
+      subscriptions: plan.subscriptions,
+    }));
+  }
+
+
+  @Get('features')
+  @ApiOperation({
+    summary: 'Catálogo de funcionalidades que os planos controlam',
+    description:
+      'A lista é fixa no código: só estas chaves são verificadas pelo EntitlementsService. Conceder uma chave fora daqui não libera nada.',
+  })
+  @ApiResponse({ status: 200, type: [FeatureCatalogResponseDto] })
+  features(): FeatureCatalogResponseDto[] {
+    return Object.values(PlanFeature).map((key) => ({
+      key,
+      label: featureLabel(key),
+    }));
+  }
+
+  @Post('plans')
+  @ApiOperation({
+    summary: 'Criar um plano comercial',
+    description:
+      'Cada faixa comporta um plano só. Com a faixa ocupada, edite o plano existente.',
+  })
+  @ApiResponse({ status: 201, type: PlanResponseDto })
+  @ApiResponse({ status: 409, description: 'Faixa já usada por outro plano' })
+  async createPlan(@Body() dto: WritePlanDto): Promise<PlanResponseDto> {
+    const plan = await this.managePlansUseCase.create({
+      name: dto.name,
+      tier: dto.tier,
+      priceCents: dto.priceCents,
+      maxMembers: dto.maxMembers ?? null,
+      maxRequestsMonth: dto.maxRequestsMonth ?? null,
+      maxStorageBytes: dto.maxStorageBytes ?? null,
+      features: dto.features,
+      active: dto.active ?? true,
+    });
+
+    return PlanResponseDto.fromEntity(plan);
+  }
+
+  @Patch('plans/:planId')
+  @ApiOperation({
+    summary: 'Editar um plano comercial',
+    description:
+      'Desativar exige que nenhuma organização esteja assinando o plano.',
+  })
+  @ApiResponse({ status: 200, type: PlanResponseDto })
+  @ApiResponse({ status: 409, description: 'Plano com assinaturas ativas' })
+  async updatePlan(
+    @Param('planId', ParseUUIDPipe) planId: string,
+    @Body() dto: UpdatePlanDto,
+  ): Promise<PlanResponseDto> {
+    const plan = await this.managePlansUseCase.update(planId, dto);
+
+    return PlanResponseDto.fromEntity(plan);
   }
 
   @Post('organizations/:companyId/plan')

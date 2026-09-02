@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from 'generated/prisma/client';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { prismaClient } from 'src/shared/infrastructure/database/prisma-transaction.manager';
 import { PrismaService } from 'src/shared/infrastructure/database/prisma.service';
 import { ReceiptEntity } from '../domain/receipt.entity';
+import { Page } from 'src/shared/dto/pagination-query.dto';
 import {
   CreateReceiptData,
   IReceiptRepository,
+  ListReceiptsFilter,
 } from '../domain/receipts.repository.interface';
 import { ReceiptMapper } from './mappers/receipt.mapper';
 
@@ -59,6 +62,53 @@ export class ReceiptRepository implements IReceiptRepository {
     });
 
     return rows.map(ReceiptMapper.toDomain);
+  }
+
+
+  async list(filter: ListReceiptsFilter): Promise<Page<ReceiptEntity>> {
+    const where: Prisma.ReceiptWhereInput = {
+      company_id: filter.companyId,
+      ...(filter.purchaseOrderId
+        ? { purchase_order_id: filter.purchaseOrderId }
+        : {}),
+      ...(filter.divergentOnly ? { has_divergence: true } : {}),
+      ...(filter.search
+        ? { number: { contains: filter.search, mode: 'insensitive' } }
+        : {}),
+      ...(filter.requesterId
+        ? {
+            purchase_order: {
+              purchase_request: { requester_id: filter.requesterId },
+            },
+          }
+        : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.receipt.count({ where }),
+      this.prisma.receipt.findMany({
+        where,
+        include: {
+          items: true,
+          purchase_order: { select: { number: true } },
+          received_by: { select: { user: { select: { name: true } } } },
+        },
+        orderBy: { received_at: 'desc' },
+        skip: filter.skip,
+        take: filter.take,
+      }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        ...ReceiptMapper.toDomain(row),
+        purchaseOrderNumber: row.purchase_order.number,
+        receivedByName: row.received_by.user.name,
+      })),
+      total,
+      page: filter.page,
+      perPage: filter.perPage,
+    };
   }
 
   async findLastNumber(

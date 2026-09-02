@@ -21,4 +21,6 @@ export abstract class IOrganizationReader {
   abstract list(
     filter: ListOrganizationsFilter,
   ): Promise<Page<OrganizationRecord>>;
+
+  abstract findById(companyId: string): Promise<OrganizationRecord | null>;
 }

@@ -80,6 +80,12 @@ export class SubscriptionResponseDto {
   @ApiProperty({ nullable: true, type: Number })
   maxMembers: number | null;
 
+  @ApiProperty({ example: 42, description: 'Pedidos enviados no mês corrente.' })
+  usedRequestsMonth: number;
+
+  @ApiProperty({ type: Number, nullable: true })
+  maxRequestsMonth: number | null;
+
   @ApiProperty()
   hasActiveSubscription: boolean;
 
@@ -97,6 +103,8 @@ export class SubscriptionResponseDto {
     dto.features = [...usage.entitlements.features];
     dto.usedSeats = usage.usedSeats;
     dto.maxMembers = usage.entitlements.maxMembers;
+    dto.usedRequestsMonth = usage.usedRequestsMonth;
+    dto.maxRequestsMonth = usage.entitlements.maxRequestsMonth;
     dto.hasActiveSubscription = usage.entitlements.hasActiveSubscription;
 
     return dto;

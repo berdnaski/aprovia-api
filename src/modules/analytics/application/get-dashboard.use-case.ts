@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { EntitlementsService } from 'src/modules/billing/application/entitlements.service';
+import { PlanFeature } from 'src/modules/billing/domain/entitlements';
 import { BudgetPeriodService } from 'src/modules/budgets/domain/services/budget-period.service';
 import { DashboardMetrics } from '../domain/metrics';
 import { IMetricsRepository } from '../domain/metrics.repository.interface';
@@ -10,6 +12,7 @@ const DEFAULT_WINDOW_DAYS = 90;
 export class GetDashboardUseCase {
   constructor(
     private readonly metricsRepository: IMetricsRepository,
+    private readonly entitlementsService: EntitlementsService,
     private readonly budgetPeriodService: BudgetPeriodService,
   ) {}
 
@@ -17,6 +20,11 @@ export class GetDashboardUseCase {
     companyId: string,
     query: DashboardQueryDto,
   ): Promise<DashboardMetrics> {
+    await this.entitlementsService.assertFeature(
+      companyId,
+      PlanFeature.ADVANCED_REPORTS,
+    );
+
     const to = query.to ?? new Date();
     const from =
       query.from ??
@@ -27,8 +35,15 @@ export class GetDashboardUseCase {
       ? this.budgetPeriodService.fromMonthKey(query.period)
       : this.budgetPeriodService.current(to);
 
-    const [totals, consumption, approvers, costCenters, bottlenecks, repeated] =
-      await Promise.all([
+    const [
+      totals,
+      consumption,
+      approvers,
+      costCenters,
+      bottlenecks,
+      repeated,
+      daily,
+    ] = await Promise.all([
         this.metricsRepository.statusTotals(window),
         this.metricsRepository.costCenterConsumption(
           companyId,
@@ -38,6 +53,7 @@ export class GetDashboardUseCase {
         this.metricsRepository.costCenterCycleTime(window),
         this.metricsRepository.bottlenecks(companyId),
         this.metricsRepository.repeatedRequests(window),
+        this.metricsRepository.dailyVolume(window),
       ]);
 
     return {
@@ -49,6 +65,7 @@ export class GetDashboardUseCase {
       costCenters,
       bottlenecks,
       repeated,
+      daily,
     };
   }
 }

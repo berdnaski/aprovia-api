@@ -1,9 +1,16 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  OmitType,
+  PartialType,
+} from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsDate,
+  IsDefined,
   IsEnum,
   IsInt,
   IsOptional,
@@ -11,8 +18,13 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
-import { OnboardingStep, SubscriptionStatus } from 'generated/prisma/enums';
+import {
+  OnboardingStep,
+  PlanTier,
+  SubscriptionStatus,
+} from 'generated/prisma/enums';
 import { PlanResponseDto } from 'src/modules/billing/dto/subscription-response.dto';
 import { PaginationQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrganizationSummary } from '../application/list-organizations.use-case';
@@ -153,3 +165,70 @@ export class SeatLimitQueryDto {
   @Min(1)
   maxMembers?: number;
 }
+
+export class WritePlanDto {
+  @ApiProperty({ example: 'Profissional', maxLength: 60 })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(60)
+  name: string;
+
+  @ApiProperty({ enum: ['BASIC', 'PROFESSIONAL', 'ENTERPRISE'] })
+  @IsEnum(PlanTier)
+  tier: PlanTier;
+
+  @ApiProperty({ type: String, example: '29900' })
+  @IsDefined({ message: 'Informe o preço do plano.' })
+  @Transform(({ value }: { value: string }) => BigInt(value))
+  priceCents: bigint;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Nulo é ilimitado.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxMembers?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxRequestsMonth?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @Transform(({ value }: { value: string | null }) =>
+    value === null || value === '' ? null : BigInt(value),
+  )
+  maxStorageBytes?: bigint | null;
+
+  @ApiProperty({ type: [String], example: ['ai-extraction'] })
+  @IsArray()
+  @IsString({ each: true })
+  features: string[];
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class UpdatePlanDto extends PartialType(
+  OmitType(WritePlanDto, ['tier'] as const),
+) {}
+
+export class PlanUsageResponseDto extends PlanResponseDto {
+  @ApiProperty({ example: 4, description: 'Organizações assinando este plano.' })
+  subscriptions: number;
+
+  @ApiProperty()
+  active: boolean;
+}
+
+export class FeatureCatalogResponseDto {
+  @ApiProperty({ example: 'ai-extraction' })
+  key: string;
+
+  @ApiProperty({ example: 'Extração assistida por IA' })
+  label: string;
+}
+

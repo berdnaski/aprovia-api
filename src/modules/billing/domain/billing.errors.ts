@@ -1,5 +1,9 @@
 import { ForbiddenError } from 'src/shared/domain/errors/domain.error';
 
+export function featureLabel(feature: string): string {
+  return FEATURE_LABELS[feature] ?? feature;
+}
+
 const FEATURE_LABELS: Record<string, string> = {
   'ai-extraction': 'Extração assistida por IA',
   'email-approval': 'Aprovação por e-mail',
@@ -27,6 +31,15 @@ export class MemberLimitReachedError extends ForbiddenError {
   constructor(used: number, max: number) {
     super(
       `A empresa já usa ${used} das ${max} vagas de membro do plano atual. Inative alguém que não usa mais o sistema ou faça upgrade para convidar mais pessoas.`,
+      { used, max },
+    );
+  }
+}
+
+export class RequestQuotaExceededError extends ForbiddenError {
+  constructor(used: number, max: number) {
+    super(
+      `A empresa já enviou ${used} dos ${max} pedidos que o plano atual permite neste mês. O contador zera no dia 1º, ou faça upgrade para continuar enviando agora.`,
       { used, max },
     );
   }

@@ -14,6 +14,7 @@ import {
 import {
   CreateSubscriptionData,
   IPlanRepository,
+  WritePlanData,
   ISubscriptionRepository,
 } from '../domain/plans.repository.interface';
 import { PlanMapper } from './mappers/plan.mapper';
@@ -43,6 +44,61 @@ export class PlanRepository implements IPlanRepository {
     });
 
     return records.map(PlanMapper.toDomain);
+  }
+
+
+  async listAll(): Promise<PlanEntity[]> {
+    const records = await this.prisma.plan.findMany({
+      orderBy: { price_cents: 'asc' },
+    });
+
+    return records.map(PlanMapper.toDomain);
+  }
+
+  async create(data: WritePlanData): Promise<PlanEntity> {
+    const record = await this.prisma.plan.create({
+      data: {
+        name: data.name,
+        tier: data.tier,
+        price_cents: data.priceCents,
+        max_members: data.maxMembers,
+        max_requests_month: data.maxRequestsMonth,
+        max_storage_bytes: data.maxStorageBytes,
+        features: data.features,
+        active: data.active,
+      },
+    });
+
+    return PlanMapper.toDomain(record);
+  }
+
+  async update(id: string, data: Partial<WritePlanData>): Promise<PlanEntity> {
+    const record = await this.prisma.plan.update({
+      where: { id },
+      data: {
+        ...(data.name === undefined ? {} : { name: data.name }),
+        ...(data.priceCents === undefined
+          ? {}
+          : { price_cents: data.priceCents }),
+        ...(data.maxMembers === undefined
+          ? {}
+          : { max_members: data.maxMembers }),
+        ...(data.maxRequestsMonth === undefined
+          ? {}
+          : { max_requests_month: data.maxRequestsMonth }),
+        ...(data.maxStorageBytes === undefined
+          ? {}
+          : { max_storage_bytes: data.maxStorageBytes }),
+        ...(data.features === undefined ? {} : { features: data.features }),
+        ...(data.active === undefined ? {} : { active: data.active }),
+      },
+    });
+
+    return PlanMapper.toDomain(record);
+  }
+
+  async countSubscriptions(planId: string): Promise<number> {
+    return this.prisma.subscription.count({ where: { plan_id: planId } });
   }
 
   async findById(id: string): Promise<PlanEntity | null> {

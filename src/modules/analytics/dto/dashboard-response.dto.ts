@@ -95,6 +95,20 @@ class RepeatedRequestDto {
   lastAt: Date;
 }
 
+export class DailyVolumeDto {
+  @ApiProperty({ example: '2026-09-01' })
+  day: string;
+
+  @ApiProperty({ example: 4, description: 'Pedidos abertos no dia.' })
+  created: number;
+
+  @ApiProperty({ example: 3, description: 'Pedidos finalizados no dia.' })
+  finalized: number;
+
+  @ApiProperty({ example: '450000', description: 'Valor aprovado no dia.' })
+  approvedCents: string;
+}
+
 export class DashboardResponseDto {
   @ApiProperty()
   from: Date;
@@ -119,6 +133,9 @@ export class DashboardResponseDto {
 
   @ApiProperty({ type: [RepeatedRequestDto] })
   repeated: RepeatedRequestDto[];
+
+  @ApiProperty({ type: [DailyVolumeDto] })
+  daily: DailyVolumeDto[];
 
   static fromDomain(
     this: void,
@@ -156,6 +173,12 @@ export class DashboardResponseDto {
       amountCents: item.amountCents.toString(),
       occurrences: item.occurrences,
       lastAt: item.lastAt,
+    }));
+    dto.daily = metrics.daily.map((item) => ({
+      day: item.day.toISOString().slice(0, 10),
+      created: item.created,
+      finalized: item.finalized,
+      approvedCents: item.approvedCents.toString(),
     }));
 
     return dto;

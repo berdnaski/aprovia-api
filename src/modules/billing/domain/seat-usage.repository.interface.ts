@@ -6,3 +6,11 @@ export abstract class ISeatUsageRepository {
     context?: TransactionContext,
   ): Promise<number>;
 }
+
+export abstract class IRequestUsageRepository {
+  abstract countSubmittedThisMonth(
+    companyId: string,
+    reference: Date,
+    context?: TransactionContext,
+  ): Promise<number>;
+}

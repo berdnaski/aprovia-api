@@ -23,4 +23,6 @@ export class ReceiptEntity {
   createdAt: Date;
   updatedAt: Date;
   items?: ReceiptItemEntity[];
+  purchaseOrderNumber?: string;
+  receivedByName?: string;
 }

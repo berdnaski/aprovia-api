@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -13,6 +14,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
+import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
+import { ListCompanyReceiptsUseCase } from '../application/list-company-receipts.use-case';
+import { ListReceiptsQueryDto } from '../dto/list-receipts-query.dto';
 import {
   ALL_ROLES,
   CurrentActor,
@@ -77,7 +81,25 @@ export class OrderReceiptsController {
 export class ReceiptsController {
   constructor(
     private readonly findReceiptByIdUseCase: FindReceiptByIdUseCase,
+    private readonly listCompanyReceiptsUseCase: ListCompanyReceiptsUseCase,
   ) {}
+
+  @Get()
+  @Roles(...ALL_ROLES)
+  @ApiOperation({
+    summary: 'Listar recebimentos da empresa',
+    description:
+      'O Admin Financeiro vê todos. Os demais perfis veem apenas os recebimentos das ordens que nasceram dos próprios pedidos.',
+  })
+  @ApiResponse({ status: 200, type: PaginatedResponseDto })
+  async list(
+    @CurrentActor() actor: RequestActor,
+    @Query() query: ListReceiptsQueryDto,
+  ): Promise<PaginatedResponseDto<ReceiptResponseDto>> {
+    const page = await this.listCompanyReceiptsUseCase.execute(actor, query);
+
+    return PaginatedResponseDto.from(page, ReceiptResponseDto.fromEntity);
+  }
 
   @Get(':id')
   @Roles(...ALL_ROLES)

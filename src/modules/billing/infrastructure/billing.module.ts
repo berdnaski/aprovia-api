@@ -9,9 +9,13 @@ import {
   IPlanRepository,
   ISubscriptionRepository,
 } from '../domain/plans.repository.interface';
-import { ISeatUsageRepository } from '../domain/seat-usage.repository.interface';
+import {
+  IRequestUsageRepository,
+  ISeatUsageRepository,
+} from '../domain/seat-usage.repository.interface';
 import { BillingController } from './billing.controller';
 import { PlanRepository, SubscriptionRepository } from './plans.repository';
+import { RequestUsageRepository } from './request-usage.repository';
 import { SeatUsageRepository } from './seat-usage.repository';
 
 @Global()
@@ -21,6 +25,7 @@ import { SeatUsageRepository } from './seat-usage.repository';
     { provide: IPlanRepository, useClass: PlanRepository },
     { provide: ISubscriptionRepository, useClass: SubscriptionRepository },
     { provide: ISeatUsageRepository, useClass: SeatUsageRepository },
+    { provide: IRequestUsageRepository, useClass: RequestUsageRepository },
     EntitlementsService,
     ListPlansUseCase,
     GetSubscriptionUsageUseCase,
@@ -32,6 +37,7 @@ import { SeatUsageRepository } from './seat-usage.repository';
     IPlanRepository,
     ISubscriptionRepository,
     ISeatUsageRepository,
+    IRequestUsageRepository,
     EntitlementsService,
     ListPlansUseCase,
     GetSubscriptionUsageUseCase,

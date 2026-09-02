@@ -1,5 +1,6 @@
 import {
   ApprovalBottleneck,
+  DailyVolume,
   ApproverPerformance,
   CostCenterConsumption,
   CostCenterCycleTime,
@@ -33,6 +34,8 @@ export abstract class IMetricsRepository {
   abstract bottlenecks(companyId: string): Promise<ApprovalBottleneck[]>;
 
   abstract repeatedRequests(window: MetricsWindow): Promise<RepeatedRequest[]>;
+
+  abstract dailyVolume(window: MetricsWindow): Promise<DailyVolume[]>;
 
   abstract monthlySummary(
     periodStart: Date,
