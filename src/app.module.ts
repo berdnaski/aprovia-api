@@ -28,6 +28,8 @@ import { QueueModule } from './shared/infrastructure/queue/queue.module';
 import { SchedulerModule } from './modules/scheduler/infrastructure/scheduler.module';
 import { InvitesModule } from './modules/invites/infrastructure/invites.module';
 import { PlatformModule } from './modules/platform/infrastructure/platform.module';
+import { FeedbackModule } from './modules/feedback/infrastructure/feedback.module';
+import { MarketingModule } from './modules/marketing/infrastructure/marketing.module';
 import { AnalyticsModule } from './modules/analytics/infrastructure/analytics.module';
 
 @Module({
@@ -57,6 +59,8 @@ import { AnalyticsModule } from './modules/analytics/infrastructure/analytics.mo
     MatchingModule,
     InvitesModule,
     PlatformModule,
+    FeedbackModule,
+    MarketingModule,
     AnalyticsModule,
     SchedulerModule,
   ],

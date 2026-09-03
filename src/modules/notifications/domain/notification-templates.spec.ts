@@ -42,7 +42,7 @@ describe('renderNotification', () => {
 
     expect(content.title).toBe('Pedido REQ-2026-0042 aguarda sua aprovação');
     expect(content.message).toContain('R$ 12.500,00');
-    expect(content.link).toBe('/requests/req-1');
+    expect(content.link).toBe('/pedidos/req-1');
     expect(content.mailActions).toBeUndefined();
   });
 
@@ -62,7 +62,7 @@ describe('renderNotification', () => {
     expect(content.mailActions?.primary.label).toBe('Aprovar');
     expect(content.mailActions?.secondary.label).toBe('Rejeitar');
     expect(content.mailActions?.primary.path).toContain('tok-123');
-    expect(content.link).toBe('/requests/req-1');
+    expect(content.link).toBe('/pedidos/req-1');
   });
 
   it('separa aprovação com ressalva de aprovação simples', () => {

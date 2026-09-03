@@ -44,6 +44,10 @@ import {
 } from './find-request-by-id.use-case';
 import { NotifyPendingApprovalUseCase } from './notify-pending-approval.use-case';
 
+export type DecideRequestInput = DecideRequestDto & {
+  channel?: DecisionChannel;
+};
+
 const MIN_JUSTIFICATION = 10;
 
 const NEEDS_JUSTIFICATION: DecisionType[] = [
@@ -78,7 +82,7 @@ export class DecideRequestUseCase {
   async execute(
     requestId: string,
     actor: RequestActor,
-    data: DecideRequestDto,
+    data: DecideRequestInput,
   ): Promise<PurchaseRequestEntity> {
     await this.entitlementsService.assertOperational(actor.companyId);
 

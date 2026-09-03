@@ -6,7 +6,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { DecisionChannel, DecisionType } from 'generated/prisma/enums';
+import { DecisionType } from 'generated/prisma/enums';
 
 export class DecideRequestDto {
   @ApiProperty({
@@ -38,9 +38,4 @@ export class DecideRequestDto {
   @IsOptional()
   @IsUUID()
   onBehalfOfId?: string;
-
-  @ApiPropertyOptional({ enum: ['PLATFORM', 'EMAIL'], default: 'PLATFORM' })
-  @IsOptional()
-  @IsEnum(DecisionChannel)
-  channel?: DecisionChannel;
 }

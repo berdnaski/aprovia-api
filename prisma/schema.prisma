@@ -9,15 +9,15 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(uuid())
-  name              String
-  email             String    @unique
-  phone             String?
-  password_hash     String?
-  email_verified    Boolean   @default(false)
+  id                 String    @id @default(uuid())
+  name               String
+  email              String    @unique
+  phone              String?
+  password_hash      String?
+  email_verified     Boolean   @default(false)
   avatar_storage_key String?
-  is_super_admin    Boolean   @default(false)
-  terms_accepted_at DateTime?
+  is_super_admin     Boolean   @default(false)
+  terms_accepted_at  DateTime?
 
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
@@ -35,6 +35,8 @@ model User {
   audit_logs            AuditLog[]
   notifications         Notification[]
   notification_prefs    NotificationPreference[]
+  feedbacks_sent        Feedback[]               @relation("FeedbackAuthor")
+  feedbacks_triaged     Feedback[]               @relation("FeedbackTriagedBy")
 
   @@map("users")
 }
@@ -117,6 +119,7 @@ model Company {
   invoices          Invoice[]
   match_results     MatchResult[]
   payables          Payable[]
+  feedbacks         Feedback[]
 
   @@map("companies")
 }
@@ -1227,4 +1230,65 @@ model Payable {
   @@index([company_id, due_date])
   @@index([supplier_id, due_date])
   @@map("payables")
+}
+
+enum FeedbackKind {
+  SUGGESTION
+  BUG
+  OTHER
+}
+
+enum FeedbackStatus {
+  NEW
+  TRIAGED
+  RESOLVED
+  DISCARDED
+}
+
+model Feedback {
+  id         String  @id @default(uuid())
+  company_id String
+  author_id  String?
+
+  kind    FeedbackKind
+  status  FeedbackStatus @default(NEW)
+  message String
+
+  route      String?
+  user_agent String?
+
+  screenshot_storage_key String?
+  screenshot_mime        String?
+  screenshot_size_bytes  Int?
+
+  triaged_by_id String?
+  triaged_at    DateTime?
+  internal_note String?
+  reply         String?
+  replied_at    DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company    Company @relation(fields: [company_id], references: [id])
+  author     User?   @relation("FeedbackAuthor", fields: [author_id], references: [id])
+  triaged_by User?   @relation("FeedbackTriagedBy", fields: [triaged_by_id], references: [id])
+
+  @@index([company_id, created_at])
+  @@index([status, created_at])
+  @@map("feedbacks")
+}
+
+model WaitlistEntry {
+  id      String  @id @default(uuid())
+  email   String  @unique
+  name    String?
+  company String?
+  source  String?
+
+  invited_at DateTime?
+  created_at DateTime  @default(now())
+
+  @@index([created_at])
+  @@map("waitlist_entries")
 }
