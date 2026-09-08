@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { NotFoundError, ValidationError } from 'src/shared/domain/errors/domain.error';
 import { AllowedMimeType, detectMimeType } from 'src/shared/domain/file-signature';
 import { IStorageService } from 'src/shared/domain/storage.service';
+import { StorageCleanupService } from 'src/shared/infrastructure/storage/storage-cleanup.service';
 import { UserEntity } from '../domain/user.entity';
 import { IUserRepository } from '../domain/users.repository.interface';
 
@@ -21,6 +22,7 @@ export class ManageAvatarUseCase {
   constructor(
     private readonly usersRepository: IUserRepository,
     private readonly storageService: IStorageService,
+    private readonly storageCleanupService: StorageCleanupService,
   ) {}
 
   async upload(userId: string, file: AvatarFile | undefined): Promise<UserEntity> {
@@ -53,7 +55,7 @@ export class ManageAvatarUseCase {
     const updated = await this.usersRepository.setAvatar(userId, storageKey);
 
     if (current.avatarStorageKey) {
-      await this.storageService.delete(current.avatarStorageKey).catch(() => undefined);
+      await this.storageCleanupService.remove(current.avatarStorageKey);
     }
 
     return updated;
@@ -69,7 +71,7 @@ export class ManageAvatarUseCase {
     const updated = await this.usersRepository.setAvatar(userId, null);
 
     if (current.avatarStorageKey) {
-      await this.storageService.delete(current.avatarStorageKey).catch(() => undefined);
+      await this.storageCleanupService.remove(current.avatarStorageKey);
     }
 
     return updated;

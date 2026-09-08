@@ -5,6 +5,7 @@ import { isFirstBusinessDayOfMonth } from 'src/shared/domain/business-calendar';
 import { EscalateStaleStepsUseCase } from '../application/escalate-stale-steps.use-case';
 import { ExpireStaleInvitesUseCase } from '../application/expire-stale-invites.use-case';
 import { PurgeExpiredTokensUseCase } from '../application/purge-expired-tokens.use-case';
+import { RevalidateSuppliersUseCase } from '../application/revalidate-suppliers.use-case';
 import { RollOverBudgetsUseCase } from '../application/roll-over-budgets.use-case';
 import { SendMonthlyReportsUseCase } from '../application/send-monthly-reports.use-case';
 import { SendSlaRemindersUseCase } from '../application/send-sla-reminders.use-case';
@@ -20,6 +21,7 @@ export class SchedulerJobs {
     private readonly escalateStaleStepsUseCase: EscalateStaleStepsUseCase,
     private readonly rollOverBudgetsUseCase: RollOverBudgetsUseCase,
     private readonly purgeExpiredTokensUseCase: PurgeExpiredTokensUseCase,
+    private readonly revalidateSuppliersUseCase: RevalidateSuppliersUseCase,
     private readonly expireStaleInvitesUseCase: ExpireStaleInvitesUseCase,
     private readonly sendMonthlyReportsUseCase: SendMonthlyReportsUseCase,
     private readonly configService: ConfigService,
@@ -44,6 +46,14 @@ export class SchedulerJobs {
     return this.run('virada orçamentária', () =>
       this.rollOverBudgetsUseCase.execute(),
     );
+  }
+
+  @Cron('0 5 * * *', { name: 'supplier-revalidation', timeZone: TIMEZONE })
+  revalidateSuppliers(): Promise<void> {
+    return this.run('revalidação de fornecedores', async () => {
+      const summary = await this.revalidateSuppliersUseCase.execute();
+      return summary.checked;
+    });
   }
 
   @Cron('0 4 * * *', { name: 'token-purge', timeZone: TIMEZONE })

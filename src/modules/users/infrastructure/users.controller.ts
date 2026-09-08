@@ -28,6 +28,10 @@ import { ClearCookiesInterceptor } from 'src/modules/auth/infrastructure/interce
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/shared/domain/authenticated-user';
 import { DeleteAccountUseCase } from '../application/delete-account.use-case';
+import {
+  ExportPersonalDataUseCase,
+  PersonalDataExport,
+} from '../application/export-personal-data.use-case';
 import { FindUserByIdUseCase } from '../application/find-user-by-id.use-case';
 import { ListUsersUseCase } from '../application/list-users.use-case';
 import { ManageAvatarUseCase } from '../application/manage-avatar.use-case';
@@ -46,6 +50,7 @@ export class UsersController {
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly updateUserProfileUseCase: UpdateUserProfileUseCase,
     private readonly deleteAccountUseCase: DeleteAccountUseCase,
+    private readonly exportPersonalDataUseCase: ExportPersonalDataUseCase,
     private readonly manageAvatarUseCase: ManageAvatarUseCase,
   ) {}
 
@@ -125,6 +130,27 @@ export class UsersController {
       dto,
     );
     return UserResponseDto.fromEntity(updated);
+  }
+
+  @Get('me/data-export')
+  @ApiOperation({
+    summary: 'Exportar meus dados pessoais',
+    description:
+      'Devolve, em formato estruturado e legível por máquina, os dados pessoais do titular autenticado. Atende aos direitos de acesso e de portabilidade do art. 18, II e V, da LGPD.',
+  })
+  @ApiResponse({ status: 200, description: 'Arquivo JSON com os dados' })
+  async exportMyData(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<PersonalDataExport> {
+    const data = await this.exportPersonalDataUseCase.execute(user.userId);
+
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="aprovai-meus-dados-${new Date().toISOString().slice(0, 10)}.json"`,
+    );
+
+    return data;
   }
 
   @Delete('me')

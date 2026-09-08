@@ -5,6 +5,7 @@ import { ChangeUserPasswordUseCase } from '../application/change-user-password.u
 import { CreateUserUseCase } from '../application/create-user.use-case';
 import { MarkEmailAsVerifiedUseCase } from '../application/mark-email-as-verified.use-case';
 import { DeleteAccountUseCase } from '../application/delete-account.use-case';
+import { ExportPersonalDataUseCase } from '../application/export-personal-data.use-case';
 import { FindUserByEmailUseCase } from '../application/find-user-by-email.use-case';
 import { FindUserByIdUseCase } from '../application/find-user-by-id.use-case';
 import { ListUsersUseCase } from '../application/list-users.use-case';
@@ -26,6 +27,7 @@ import { UsersController } from './users.controller';
     ValidatePasswordUseCase,
     UpdateUserProfileUseCase,
     DeleteAccountUseCase,
+    ExportPersonalDataUseCase,
     ListUsersUseCase,
     ManageAvatarUseCase,
     MarkEmailAsVerifiedUseCase,

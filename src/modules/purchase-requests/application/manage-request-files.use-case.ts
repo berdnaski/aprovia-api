@@ -11,6 +11,7 @@ import {
   isAllowedMimeType,
 } from 'src/shared/domain/file-signature';
 import { IStorageService } from 'src/shared/domain/storage.service';
+import { StorageCleanupService } from 'src/shared/infrastructure/storage/storage-cleanup.service';
 import { RequestFileEntity } from '../domain/request-file.entity';
 import { IRequestFileRepository } from '../domain/request-files.repository.interface';
 import {
@@ -35,6 +36,7 @@ export class ManageRequestFilesUseCase {
     private readonly requestFileRepository: IRequestFileRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
     private readonly storageService: IStorageService,
+    private readonly storageCleanupService: StorageCleanupService,
     private readonly configService: ConfigService<EnvSchema, true>,
     private readonly entitlementsService: EntitlementsService,
   ) {}
@@ -143,6 +145,6 @@ export class ManageRequestFilesUseCase {
     }
 
     await this.requestFileRepository.delete(fileId);
-    await this.storageService.delete(file.storageKey).catch(() => undefined);
+    await this.storageCleanupService.remove(file.storageKey);
   }
 }

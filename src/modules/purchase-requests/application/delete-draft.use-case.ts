@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IStorageService } from 'src/shared/domain/storage.service';
+import { StorageCleanupService } from 'src/shared/infrastructure/storage/storage-cleanup.service';
 import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import { IRequestFileRepository } from '../domain/request-files.repository.interface';
 import { IPurchaseRequestRepository } from '../domain/purchase-requests.repository.interface';
@@ -15,6 +16,7 @@ export class DeleteDraftUseCase {
     private readonly requestFileRepository: IRequestFileRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
     private readonly storageService: IStorageService,
+    private readonly storageCleanupService: StorageCleanupService,
     private readonly transactionManager: ITransactionManager,
   ) {}
 
@@ -28,7 +30,7 @@ export class DeleteDraftUseCase {
     });
 
     for (const file of files) {
-      await this.storageService.delete(file.storageKey).catch(() => undefined);
+      await this.storageCleanupService.remove(file.storageKey);
     }
   }
 }

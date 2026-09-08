@@ -28,5 +28,7 @@ export abstract class IUserRepository {
     storageKey: string | null,
   ): Promise<UserEntity>;
 
+  abstract collectStorageKeys(id: string): Promise<string[]>;
+
   abstract anonymize(id: string): Promise<void>;
 }

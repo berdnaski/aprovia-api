@@ -4,6 +4,7 @@ import { WaitlistEntryEntity } from './waitlist.entity';
 export interface CreateWaitlistData {
   email: string;
   name: string | null;
+  phone: string | null;
   company: string | null;
   source: string | null;
 }

@@ -6,9 +6,11 @@ import { CompaniesModule } from 'src/modules/companies/infrastructure/companies.
 import { PurchaseRequestsModule } from 'src/modules/purchase-requests/infrastructure/purchase-requests.module';
 import { AnalyticsModule } from 'src/modules/analytics/infrastructure/analytics.module';
 import { InvitesModule } from 'src/modules/invites/infrastructure/invites.module';
+import { SuppliersModule } from 'src/modules/suppliers/infrastructure/suppliers.module';
 import { EscalateStaleStepsUseCase } from '../application/escalate-stale-steps.use-case';
 import { ExpireStaleInvitesUseCase } from '../application/expire-stale-invites.use-case';
 import { PurgeExpiredTokensUseCase } from '../application/purge-expired-tokens.use-case';
+import { RevalidateSuppliersUseCase } from '../application/revalidate-suppliers.use-case';
 import { RollOverBudgetsUseCase } from '../application/roll-over-budgets.use-case';
 import { SendMonthlyReportsUseCase } from '../application/send-monthly-reports.use-case';
 import { SendSlaRemindersUseCase } from '../application/send-sla-reminders.use-case';
@@ -23,6 +25,7 @@ import { SchedulerJobs } from './scheduler.jobs';
     AuthModule,
     InvitesModule,
     AnalyticsModule,
+    SuppliersModule,
   ],
   providers: [
     SendSlaRemindersUseCase,
@@ -31,6 +34,7 @@ import { SchedulerJobs } from './scheduler.jobs';
     PurgeExpiredTokensUseCase,
     ExpireStaleInvitesUseCase,
     SendMonthlyReportsUseCase,
+    RevalidateSuppliersUseCase,
     SchedulerJobs,
   ],
   exports: [
@@ -39,6 +43,7 @@ import { SchedulerJobs } from './scheduler.jobs';
     RollOverBudgetsUseCase,
     ExpireStaleInvitesUseCase,
     SendMonthlyReportsUseCase,
+    RevalidateSuppliersUseCase,
   ],
 })
 export class SchedulerModule {}

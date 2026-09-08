@@ -13,6 +13,7 @@ interface RawEntry {
   id: string;
   email: string;
   name: string | null;
+  phone: string | null;
   company: string | null;
   source: string | null;
   invited_at: Date | null;
@@ -25,6 +26,7 @@ function toDomain(raw: RawEntry): WaitlistEntryEntity {
   entity.id = raw.id;
   entity.email = raw.email;
   entity.name = raw.name;
+  entity.phone = raw.phone;
   entity.company = raw.company;
   entity.source = raw.source;
   entity.invitedAt = raw.invited_at;
@@ -42,6 +44,7 @@ export class WaitlistRepository implements IWaitlistRepository {
       data: {
         email: data.email,
         name: data.name,
+        phone: data.phone,
         company: data.company,
         source: data.source,
       },
@@ -64,6 +67,7 @@ export class WaitlistRepository implements IWaitlistRepository {
           OR: [
             { email: { contains: filter.search, mode: 'insensitive' } },
             { company: { contains: filter.search, mode: 'insensitive' } },
+            { phone: { contains: filter.search, mode: 'insensitive' } },
           ],
         }
       : {};

@@ -93,6 +93,24 @@ export class UserRepository implements IUserRepository {
     return UserMapper.toDomain(record);
   }
 
+  async collectStorageKeys(id: string): Promise<string[]> {
+    const [user, feedbacks] = await this.prisma.$transaction([
+      this.prisma.user.findUnique({
+        where: { id },
+        select: { avatar_storage_key: true },
+      }),
+      this.prisma.feedback.findMany({
+        where: { author_id: id, screenshot_storage_key: { not: null } },
+        select: { screenshot_storage_key: true },
+      }),
+    ]);
+
+    return [
+      user?.avatar_storage_key,
+      ...feedbacks.map((feedback) => feedback.screenshot_storage_key),
+    ].filter((key): key is string => typeof key === 'string' && key !== '');
+  }
+
   async anonymize(id: string): Promise<void> {
     const now = new Date();
 
@@ -103,6 +121,16 @@ export class UserRepository implements IUserRepository {
       });
 
       await tx.token.deleteMany({ where: { user_id: id } });
+
+      await tx.feedback.updateMany({
+        where: { author_id: id },
+        data: {
+          screenshot_storage_key: null,
+          screenshot_mime: null,
+          screenshot_size_bytes: null,
+          user_agent: null,
+        },
+      });
 
       await tx.user.update({
         where: { id },

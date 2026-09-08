@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WaitlistEntryEntity } from '../domain/waitlist.entity';
 
 export class WaitlistJoinedDto {
-  @ApiProperty({ description: 'Posição na fila.' })
-  position: number;
-
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'Indica se o e-mail já constava na lista. A posição na fila não é exposta publicamente.',
+  })
   alreadyOnList: boolean;
 }
 
@@ -18,6 +18,9 @@ export class WaitlistEntryResponseDto {
 
   @ApiPropertyOptional({ nullable: true })
   name: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  phone: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   company: string | null;
@@ -40,6 +43,7 @@ export class WaitlistEntryResponseDto {
     dto.id = entity.id;
     dto.email = entity.email;
     dto.name = entity.name;
+    dto.phone = entity.phone;
     dto.company = entity.company;
     dto.source = entity.source;
     dto.invitedAt = entity.invitedAt?.toISOString() ?? null;
