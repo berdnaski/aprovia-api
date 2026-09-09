@@ -41,7 +41,7 @@ export class ReleasePayableWithoutInvoiceUseCase {
   ): Promise<PayableEntity> {
     if (actor.role !== CompanyMemberRole.FINANCE_ADMIN) {
       throw new ForbiddenError(
-        'Só o Admin Financeiro pode liberar um pagamento sem nota fiscal conferível (RN66).',
+        'Só o Admin Financeiro pode liberar um pagamento sem nota fiscal conferível.',
       );
     }
 

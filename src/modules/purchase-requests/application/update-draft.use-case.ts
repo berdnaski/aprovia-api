@@ -39,7 +39,7 @@ export class UpdateDraftUseCase {
 
       if (costCenter.disabledAt) {
         throw new ValidationError(
-          'Não é possível vincular o pedido a um Centro de Custo inativo (RN13)',
+          'Este Centro de Custo está inativo e não aceita novos pedidos.',
         );
       }
 

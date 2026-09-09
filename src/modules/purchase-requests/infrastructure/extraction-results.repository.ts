@@ -36,7 +36,9 @@ export class ExtractionResultRepository implements IExtractionResultRepository {
       where: { id },
       data: {
         status: data.status,
-        fields: data.fields ? { ...data.fields } : Prisma.JsonNull,
+        fields: data.fields
+          ? (JSON.parse(JSON.stringify(data.fields)) as Prisma.InputJsonObject)
+          : Prisma.JsonNull,
         failure_reason: data.failureReason,
         completed_at: new Date(),
       },

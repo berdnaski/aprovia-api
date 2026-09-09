@@ -21,6 +21,7 @@ export interface ListCostCentersSummaryOptions {
   search?: string;
   managerId?: string;
   budgetStatus?: CostCenterBudgetStatus;
+  accessibleToMemberId?: string;
 }
 
 @Injectable()
@@ -39,6 +40,7 @@ export class ListCostCentersSummaryUseCase {
         includeDisabled: options?.includeDisabled,
         search: options?.search,
         managerId: options?.managerId,
+        accessibleToMemberId: options?.accessibleToMemberId,
       }),
       this.summaryRepository.summarize(companyId, new Date()),
     ]);

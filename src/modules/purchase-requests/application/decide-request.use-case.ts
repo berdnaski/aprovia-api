@@ -138,7 +138,13 @@ export class DecideRequestUseCase {
       data.type === DecisionType.APPROVED ||
       data.type === DecisionType.APPROVED_WITH_OVERRIDE;
 
-    if (approves && isLastStep && stepCloses && request.supplierId) {
+    if (approves && isLastStep && stepCloses) {
+      if (!request.supplierId) {
+        throw new ValidationError(
+          'Este pedido ainda não tem fornecedor, e o CNPJ é conferido antes de liberar a compra. Devolva para complementação para quem pediu informar qual é.',
+        );
+      }
+
       await this.assertSupplierUsableUseCase.forApproval(
         request.supplierId,
         actor.companyId,

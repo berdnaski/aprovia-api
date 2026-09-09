@@ -4,6 +4,13 @@ import { ICostCenterMemberRepository } from '../cost-center-members.repository.i
 import { CostCenterEntity } from '../cost-center.entity';
 import { CostCenterNotAssignedError } from '../cost-centers.errors';
 
+export function costCenterScopeFor(
+  role: CompanyMemberRole,
+  memberId: string,
+): string | undefined {
+  return role === CompanyMemberRole.FINANCE_ADMIN ? undefined : memberId;
+}
+
 @Injectable()
 export class CostCenterAccessService {
   constructor(

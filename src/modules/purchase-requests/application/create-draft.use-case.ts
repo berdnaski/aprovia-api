@@ -65,7 +65,7 @@ export class CreateDraftUseCase {
 
     if (costCenter.disabledAt) {
       throw new ValidationError(
-        'Não é possível criar pedidos para um Centro de Custo inativo (RN13)',
+        'Este Centro de Custo está inativo e não aceita novos pedidos.',
       );
     }
 

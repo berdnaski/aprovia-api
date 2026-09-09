@@ -3,6 +3,7 @@ import {
   LlmCompletionResult,
   LlmUnavailableError,
 } from 'src/shared/domain/llm.client';
+import { ICategoryRepository } from 'src/modules/categories/domain/categories.repository.interface';
 import { IStorageService } from 'src/shared/domain/storage.service';
 import { ExtractionStatus } from '../domain/extraction.service';
 import { IRequestFileRepository } from '../domain/request-files.repository.interface';
@@ -14,12 +15,21 @@ const completionOf = (content: string): LlmCompletionResult => ({
   completionTokens: 10,
 });
 
-const build = (complete: ILlmClient['complete']) => {
+const build = (complete: ILlmClient['complete'], categoryNames: string[] = []) => {
   const llmClient = { complete };
   const storageService = {} as IStorageService;
   const fileRepository = {} as IRequestFileRepository;
+  const categoryRepository = {
+    list: () =>
+      Promise.resolve(categoryNames.map((name) => ({ name }))),
+  } as unknown as ICategoryRepository;
 
-  return new LlmExtractionService(llmClient, storageService, fileRepository);
+  return new LlmExtractionService(
+    llmClient,
+    storageService,
+    fileRepository,
+    categoryRepository,
+  );
 };
 
 describe('LlmExtractionService', () => {

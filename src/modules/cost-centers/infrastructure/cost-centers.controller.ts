@@ -21,6 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { CurrentCompany } from 'src/shared/decorators/current-company.decorator';
+import { CurrentMember } from 'src/shared/decorators/current-member.decorator';
+import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { CreateCostCenterUseCase } from '../application/create-cost-center.use-case';
 import { DeleteCostCenterUseCase } from '../application/delete-cost-center.use-case';
@@ -36,6 +38,7 @@ import { ListCostCentersUseCase } from '../application/list-cost-centers.use-cas
 import { TransferCostCenterManagementUseCase } from '../application/transfer-cost-center-management.use-case';
 import { UnlinkCostCenterMemberUseCase } from '../application/unlink-cost-center-member.use-case';
 import { UpdateCostCenterUseCase } from '../application/update-cost-center.use-case';
+import { costCenterScopeFor } from '../domain/services/cost-center-access.service';
 import { TransferCostCenterManagementDto } from '../dto/transfer-cost-center-management.dto';
 import { CostCenterMemberResponseDto } from '../dto/cost-center-member-response.dto';
 import { CostCenterResponseDto } from '../dto/cost-center-response.dto';
@@ -84,17 +87,24 @@ export class CostCentersController {
   }
 
   @Get()
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(
+    CompanyMemberRole.REQUESTER,
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+  )
   @ApiOperation({ summary: 'Listar Centros de Custo' })
   @ApiQuery({ name: 'includeDisabled', required: false, type: Boolean })
   @ApiResponse({ status: 200, type: [CostCenterResponseDto] })
   async list(
     @CurrentCompany() companyId: string,
+    @CurrentMember() memberId: string,
+    @CurrentUser('role') role: CompanyMemberRole,
     @Query('includeDisabled', new ParseBoolPipe({ optional: true }))
     includeDisabled?: boolean,
   ): Promise<CostCenterResponseDto[]> {
     const costCenters = await this.listCostCentersUseCase.execute(companyId, {
       includeDisabled,
+      accessibleToMemberId: costCenterScopeFor(role, memberId),
     });
     return CostCenterResponseDto.fromEntities(costCenters);
   }
@@ -127,6 +137,8 @@ export class CostCentersController {
   @ApiResponse({ status: 200, type: [CostCenterSummaryResponseDto] })
   listWithSummary(
     @CurrentCompany() companyId: string,
+    @CurrentMember() memberId: string,
+    @CurrentUser('role') role: CompanyMemberRole,
     @Query('includeDisabled', new ParseBoolPipe({ optional: true }))
     includeDisabled?: boolean,
     @Query('search') search?: string,
@@ -138,6 +150,7 @@ export class CostCentersController {
       search,
       managerId,
       budgetStatus,
+      accessibleToMemberId: costCenterScopeFor(role, memberId),
     });
   }
 

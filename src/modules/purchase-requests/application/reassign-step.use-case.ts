@@ -71,19 +71,19 @@ export class ReassignStepUseCase {
 
     if (target.role === CompanyMemberRole.REQUESTER) {
       throw new ValidationError(
-        'O destino precisa ter perfil de aprovação válido (RN33)',
+        'A pessoa escolhida precisa ter perfil de aprovação.',
       );
     }
 
     if (target.id === request.requesterId) {
       throw new ValidationError(
-        'O solicitante não pode ser o aprovador do próprio pedido (RN23)',
+        'Quem pediu não pode aprovar o próprio pedido.',
       );
     }
 
     if (target.approvalLimitCents < original.approvalLimitCents) {
       throw new ValidationError(
-        'O destino precisa ter alçada equivalente à do aprovador original (RN33)',
+        'A pessoa escolhida precisa ter alçada equivalente à do aprovador original.',
         {
           originalLimitCents: original.approvalLimitCents.toString(),
           targetLimitCents: target.approvalLimitCents.toString(),

@@ -65,20 +65,16 @@ export class SubmitRequestUseCase {
       throw new EmptyRequestError();
     }
 
-    if (!request.supplierId) {
-      throw new ValidationError(
-        'Informe o fornecedor antes de submeter: a validação do CNPJ depende dele (RN34)',
+    if (request.supplierId) {
+      await this.assertSupplierUsableUseCase.forSubmission(
+        request.supplierId,
+        actor.companyId,
       );
     }
 
-    await this.assertSupplierUsableUseCase.forSubmission(
-      request.supplierId,
-      actor.companyId,
-    );
-
     const total = await this.requestItemRepository.sumTotal(requestId);
 
-    if (!data.confirmDuplicate) {
+    if (!data.confirmDuplicate && request.supplierId) {
       const duplicates = await this.purchaseRequestRepository.findRecentSimilar(
         {
           companyId: actor.companyId,
@@ -95,7 +91,7 @@ export class SubmitRequestUseCase {
 
       if (duplicates.length > 0) {
         throw new ValidationError(
-          `Você criou ${duplicates.length} pedido(s) parecido(s) nos últimos ${DUPLICATE_WINDOW_DAYS} dias para o mesmo fornecedor. Confirme que não é duplicata para prosseguir (RN36)`,
+          `Você criou ${duplicates.length} pedido(s) parecido(s) nos últimos ${DUPLICATE_WINDOW_DAYS} dias para o mesmo fornecedor. Confirme que não é duplicata para prosseguir.`,
           {
             duplicates: duplicates.map((item) => ({
               number: item.number,

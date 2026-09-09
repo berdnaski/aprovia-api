@@ -21,6 +21,7 @@ export interface ListCostCentersFilter {
   parentId?: string | null;
   search?: string;
   managerId?: string;
+  accessibleToMemberId?: string;
 }
 
 export interface CostCenterUsage {

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from 'generated/prisma/client';
 import { RequestStatus } from 'generated/prisma/enums';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { prismaClient } from 'src/shared/infrastructure/database/prisma-transaction.manager';
@@ -57,6 +58,32 @@ export class CostCenterRepository implements ICostCenterRepository {
     filter?: ListCostCentersFilter,
   ): Promise<CostCenterEntity[]> {
     const search = filter?.search?.trim();
+    const accessibleTo = filter?.accessibleToMemberId;
+
+    const and: Prisma.CostCenterWhereInput[] = [];
+
+    if (search) {
+      and.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { code: { contains: search, mode: 'insensitive' } },
+          {
+            manager: {
+              user: { name: { contains: search, mode: 'insensitive' } },
+            },
+          },
+        ],
+      });
+    }
+
+    if (accessibleTo) {
+      and.push({
+        OR: [
+          { manager_id: accessibleTo },
+          { members: { some: { member_id: accessibleTo } } },
+        ],
+      });
+    }
 
     const records = await this.prisma.costCenter.findMany({
       where: {
@@ -64,24 +91,7 @@ export class CostCenterRepository implements ICostCenterRepository {
         disabled_at: filter?.includeDisabled ? undefined : null,
         parent_id: filter?.parentId === undefined ? undefined : filter.parentId,
         manager_id: filter?.managerId,
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' as const } },
-                { code: { contains: search, mode: 'insensitive' as const } },
-                {
-                  manager: {
-                    user: {
-                      name: {
-                        contains: search,
-                        mode: 'insensitive' as const,
-                      },
-                    },
-                  },
-                },
-              ],
-            }
-          : {}),
+        ...(and.length > 0 ? { AND: and } : {}),
       },
       orderBy: { name: 'asc' },
     });

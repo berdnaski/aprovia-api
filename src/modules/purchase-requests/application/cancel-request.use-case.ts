@@ -64,7 +64,7 @@ export class CancelRequestUseCase {
 
     if (isApproved && !isAdmin) {
       throw new ForbiddenError(
-        'Requisições aprovadas não podem ser canceladas pelo Solicitante. A reversão exige um Admin Financeiro (RN41)',
+        'Pedidos já aprovados não podem ser cancelados por quem pediu. Peça a reversão a um Admin Financeiro.',
       );
     }
 
