@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { sumTaxesByKind } from '../domain/invoice-taxes';
 import { linkInvoiceItems } from '../domain/item-matching';
 import {
   AuditEventType,
@@ -121,7 +122,7 @@ export class UploadInvoiceUseCase {
           totalCents: item.totalCents,
           purchaseOrderItemId: links.get(item.sequence) ?? null,
         })),
-        taxes: parsed.items.flatMap((item) => item.taxes),
+        taxes: sumTaxesByKind(parsed.items.flatMap((item) => item.taxes)),
       });
 
       await this.auditLogRepository.record({
