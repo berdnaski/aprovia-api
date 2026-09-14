@@ -195,6 +195,10 @@ export class PurchaseOrderRepository implements IPurchaseOrderRepository {
       company_id: filter.companyId,
     };
 
+    if (filter.requesterId) {
+      where.purchase_request = { requester_id: filter.requesterId };
+    }
+
     if (filter.status?.length) {
       where.status = { in: filter.status };
     }

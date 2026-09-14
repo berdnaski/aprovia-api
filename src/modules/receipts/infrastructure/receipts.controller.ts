@@ -13,6 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FindPurchaseOrderForActorUseCase } from 'src/modules/purchase-orders/application/find-purchase-order-for-actor.use-case';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
 import { ListCompanyReceiptsUseCase } from '../application/list-company-receipts.use-case';
@@ -36,6 +37,7 @@ export class OrderReceiptsController {
   constructor(
     private readonly registerReceiptUseCase: RegisterReceiptUseCase,
     private readonly listReceiptsUseCase: ListReceiptsUseCase,
+    private readonly findPurchaseOrderForActorUseCase: FindPurchaseOrderForActorUseCase,
   ) {}
 
   @Post()
@@ -66,6 +68,8 @@ export class OrderReceiptsController {
     @CurrentActor() actor: RequestActor,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ReceiptResponseDto[]> {
+    await this.findPurchaseOrderForActorUseCase.execute(id, actor);
+
     const receipts = await this.listReceiptsUseCase.execute(
       id,
       actor.companyId,

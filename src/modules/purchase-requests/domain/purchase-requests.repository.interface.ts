@@ -29,6 +29,7 @@ export interface UpdatePurchaseRequestData {
 
 export interface ListRequestsFilter {
   visibility: RequestVisibility;
+  awaitingApproverId?: string;
   status?: RequestStatus[];
   costCenterId?: string;
   supplierId?: string;

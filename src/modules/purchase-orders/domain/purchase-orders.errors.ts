@@ -1,5 +1,6 @@
 import {
   ConflictError,
+  ForbiddenError,
   InvalidStateError,
   NotFoundError,
   ValidationError,
@@ -26,6 +27,14 @@ export class PurchaseOrderAlreadyIssuedError extends ConflictError {
 export class PurchaseOrderNotFoundError extends NotFoundError {
   constructor() {
     super('Ordem de compra não encontrada.');
+  }
+}
+
+export class PurchaseOrderNotOwnedError extends ForbiddenError {
+  constructor() {
+    super(
+      'Esta ordem de compra é de um pedido de outra pessoa. Você só acompanha as ordens que nasceram dos seus pedidos.',
+    );
   }
 }
 

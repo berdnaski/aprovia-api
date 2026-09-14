@@ -22,7 +22,7 @@ import {
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
 import { CancelPurchaseOrderUseCase } from '../application/cancel-purchase-order.use-case';
-import { FindPurchaseOrderByIdUseCase } from '../application/find-purchase-order-by-id.use-case';
+import { FindPurchaseOrderForActorUseCase } from '../application/find-purchase-order-for-actor.use-case';
 import { GetOrderBalanceUseCase } from '../application/get-order-balance.use-case';
 import { IssuePurchaseOrderUseCase } from '../application/issue-purchase-order.use-case';
 import { ListPurchaseOrdersUseCase } from '../application/list-purchase-orders.use-case';
@@ -41,7 +41,7 @@ import {
 export class PurchaseOrdersController {
   constructor(
     private readonly listPurchaseOrdersUseCase: ListPurchaseOrdersUseCase,
-    private readonly findPurchaseOrderByIdUseCase: FindPurchaseOrderByIdUseCase,
+    private readonly findPurchaseOrderForActorUseCase: FindPurchaseOrderForActorUseCase,
     private readonly sendPurchaseOrderUseCase: SendPurchaseOrderUseCase,
     private readonly cancelPurchaseOrderUseCase: CancelPurchaseOrderUseCase,
     private readonly getOrderBalanceUseCase: GetOrderBalanceUseCase,
@@ -59,10 +59,7 @@ export class PurchaseOrdersController {
     @CurrentActor() actor: RequestActor,
     @Query() query: ListPurchaseOrdersQueryDto,
   ): Promise<PaginatedResponseDto<PurchaseOrderResponseDto>> {
-    const page = await this.listPurchaseOrdersUseCase.execute(
-      actor.companyId,
-      query,
-    );
+    const page = await this.listPurchaseOrdersUseCase.execute(actor, query);
 
     return PaginatedResponseDto.from(page, PurchaseOrderResponseDto.fromEntity);
   }
@@ -75,9 +72,9 @@ export class PurchaseOrdersController {
     @CurrentActor() actor: RequestActor,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PurchaseOrderResponseDto> {
-    const order = await this.findPurchaseOrderByIdUseCase.execute(
+    const order = await this.findPurchaseOrderForActorUseCase.execute(
       id,
-      actor.companyId,
+      actor,
     );
 
     return PurchaseOrderResponseDto.fromEntity(order);
@@ -95,10 +92,7 @@ export class PurchaseOrdersController {
     @CurrentActor() actor: RequestActor,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ItemBalanceResponseDto[]> {
-    const balances = await this.getOrderBalanceUseCase.execute(
-      id,
-      actor.companyId,
-    );
+    const balances = await this.getOrderBalanceUseCase.execute(id, actor);
 
     return balances.map(ItemBalanceResponseDto.fromBalance);
   }

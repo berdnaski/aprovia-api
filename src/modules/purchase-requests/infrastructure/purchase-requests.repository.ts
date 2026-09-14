@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
+import { StepStatus } from 'generated/prisma/enums';
 import { Page } from 'src/shared/dto/pagination-query.dto';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { prismaClient } from 'src/shared/infrastructure/database/prisma-transaction.manager';
@@ -168,6 +169,18 @@ export class PurchaseRequestRepository implements IPurchaseRequestRepository {
           { number: { contains: filter.search, mode: 'insensitive' } },
           { title: { contains: filter.search, mode: 'insensitive' } },
         ],
+      });
+    }
+
+    if (filter.awaitingApproverId) {
+      conditions.push({
+        approval_steps: {
+          some: {
+            expected_approver_id: filter.awaitingApproverId,
+            status: StepStatus.WAITING,
+            started_at: { not: null },
+          },
+        },
       });
     }
 

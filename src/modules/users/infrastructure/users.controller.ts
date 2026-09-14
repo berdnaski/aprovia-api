@@ -91,6 +91,7 @@ export class UsersController {
 
   @Get(':id/avatar')
   @Header('Cache-Control', 'private, max-age=300')
+  @Header('Cross-Origin-Resource-Policy', 'cross-origin')
   @ApiOperation({
     summary: 'Servir a foto de perfil',
     description:

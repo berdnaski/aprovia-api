@@ -4,6 +4,7 @@ import { AuditModule } from 'src/modules/audit/infrastructure/audit.module';
 import { PurchaseRequestsModule } from 'src/modules/purchase-requests/infrastructure/purchase-requests.module';
 import { CancelPurchaseOrderUseCase } from '../application/cancel-purchase-order.use-case';
 import { FindPurchaseOrderByIdUseCase } from '../application/find-purchase-order-by-id.use-case';
+import { FindPurchaseOrderForActorUseCase } from '../application/find-purchase-order-for-actor.use-case';
 import { GetOrderBalanceUseCase } from '../application/get-order-balance.use-case';
 import { IssuePurchaseOrderUseCase } from '../application/issue-purchase-order.use-case';
 import { ListPurchaseOrdersUseCase } from '../application/list-purchase-orders.use-case';
@@ -23,10 +24,15 @@ import { PurchaseOrderRepository } from './purchase-orders.repository';
     IssuePurchaseOrderUseCase,
     ListPurchaseOrdersUseCase,
     FindPurchaseOrderByIdUseCase,
+    FindPurchaseOrderForActorUseCase,
     SendPurchaseOrderUseCase,
     CancelPurchaseOrderUseCase,
     GetOrderBalanceUseCase,
   ],
-  exports: [IPurchaseOrderRepository, FindPurchaseOrderByIdUseCase],
+  exports: [
+    IPurchaseOrderRepository,
+    FindPurchaseOrderByIdUseCase,
+    FindPurchaseOrderForActorUseCase,
+  ],
 })
 export class PurchaseOrdersModule {}

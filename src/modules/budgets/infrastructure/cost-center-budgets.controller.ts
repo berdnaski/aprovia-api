@@ -13,7 +13,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
+import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
+import { CostCenterAccessService } from 'src/modules/cost-centers/domain/services/cost-center-access.service';
 import { CurrentCompany } from 'src/shared/decorators/current-company.decorator';
+import { CurrentMember } from 'src/shared/decorators/current-member.decorator';
+import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { CreateBudgetUseCase } from '../application/create-budget.use-case';
 import { GetBudgetConsumptionUseCase } from '../application/get-budget-consumption.use-case';
@@ -30,7 +34,26 @@ export class CostCenterBudgetsController {
     private readonly createBudgetUseCase: CreateBudgetUseCase,
     private readonly listCostCenterBudgetsUseCase: ListCostCenterBudgetsUseCase,
     private readonly getBudgetConsumptionUseCase: GetBudgetConsumptionUseCase,
+    private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
+    private readonly costCenterAccessService: CostCenterAccessService,
   ) {}
+
+  private async assertAccess(
+    costCenterId: string,
+    companyId: string,
+    memberId: string,
+    role: CompanyMemberRole,
+  ): Promise<void> {
+    const costCenter = await this.findCostCenterByIdUseCase.execute(
+      costCenterId,
+      companyId,
+    );
+    await this.costCenterAccessService.assertCanRequest(
+      costCenter,
+      memberId,
+      role,
+    );
+  }
 
   @Post()
   @Roles(CompanyMemberRole.FINANCE_ADMIN)
@@ -58,13 +81,21 @@ export class CostCenterBudgetsController {
   }
 
   @Get()
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(
+    CompanyMemberRole.REQUESTER,
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+  )
   @ApiOperation({ summary: 'Listar orçamentos do Centro de Custo' })
   @ApiResponse({ status: 200, type: [BudgetResponseDto] })
   async list(
     @CurrentCompany() companyId: string,
+    @CurrentMember() memberId: string,
+    @CurrentUser('role') role: CompanyMemberRole,
     @Param('costCenterId', ParseUUIDPipe) costCenterId: string,
   ): Promise<BudgetResponseDto[]> {
+    await this.assertAccess(costCenterId, companyId, memberId, role);
+
     const budgets = await this.listCostCenterBudgetsUseCase.execute(
       costCenterId,
       companyId,
@@ -73,7 +104,11 @@ export class CostCenterBudgetsController {
   }
 
   @Get('current')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(
+    CompanyMemberRole.REQUESTER,
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+  )
   @ApiOperation({
     summary: 'Painel de consumo do período vigente',
     description:
@@ -83,8 +118,12 @@ export class CostCenterBudgetsController {
   @ApiResponse({ status: 400, description: 'Sem orçamento no período vigente' })
   async current(
     @CurrentCompany() companyId: string,
+    @CurrentMember() memberId: string,
+    @CurrentUser('role') role: CompanyMemberRole,
     @Param('costCenterId', ParseUUIDPipe) costCenterId: string,
   ): Promise<BudgetConsumptionResponseDto> {
+    await this.assertAccess(costCenterId, companyId, memberId, role);
+
     const balance = await this.getBudgetConsumptionUseCase.execute(
       costCenterId,
       companyId,

@@ -15,10 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
-import {
-  ALL_ROLES,
-  CurrentActor,
-} from 'src/modules/purchase-requests/infrastructure/request-actor';
+import { CurrentActor } from 'src/modules/purchase-requests/infrastructure/request-actor';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
 import { FindMatchResultByIdUseCase } from '../application/find-match-result-by-id.use-case';
@@ -40,7 +37,7 @@ export class MatchingController {
   ) {}
 
   @Get()
-  @Roles(...ALL_ROLES)
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
   @ApiOperation({
     summary: 'Fila de conferências (RN59)',
     description: 'Filtre por status=DIVERGENT para ver o que está pendente.',
@@ -59,7 +56,7 @@ export class MatchingController {
   }
 
   @Get(':id')
-  @Roles(...ALL_ROLES)
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
   @ApiOperation({ summary: 'Detalhar uma conferência com as divergências' })
   @ApiResponse({ status: 200, type: MatchResultResponseDto })
   async findById(

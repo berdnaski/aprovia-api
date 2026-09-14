@@ -20,10 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { CompanyMemberRole } from 'generated/prisma/enums';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
-import {
-  ALL_ROLES,
-  CurrentActor,
-} from 'src/modules/purchase-requests/infrastructure/request-actor';
+import { CurrentActor } from 'src/modules/purchase-requests/infrastructure/request-actor';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
 import { ListPayablesUseCase } from '../application/list-payables.use-case';
@@ -52,7 +49,7 @@ export class PayablesController {
   ) {}
 
   @Get()
-  @Roles(...ALL_ROLES)
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
   @ApiOperation({ summary: 'Listar contas a pagar (RN61)' })
   @ApiResponse({ status: 200, type: PaginatedResponseDto })
   async list(

@@ -38,7 +38,10 @@ import { ListCostCentersUseCase } from '../application/list-cost-centers.use-cas
 import { TransferCostCenterManagementUseCase } from '../application/transfer-cost-center-management.use-case';
 import { UnlinkCostCenterMemberUseCase } from '../application/unlink-cost-center-member.use-case';
 import { UpdateCostCenterUseCase } from '../application/update-cost-center.use-case';
-import { costCenterScopeFor } from '../domain/services/cost-center-access.service';
+import {
+  CostCenterAccessService,
+  costCenterScopeFor,
+} from '../domain/services/cost-center-access.service';
 import { TransferCostCenterManagementDto } from '../dto/transfer-cost-center-management.dto';
 import { CostCenterMemberResponseDto } from '../dto/cost-center-member-response.dto';
 import { CostCenterResponseDto } from '../dto/cost-center-response.dto';
@@ -63,6 +66,7 @@ export class CostCentersController {
     private readonly linkCostCenterMemberUseCase: LinkCostCenterMemberUseCase,
     private readonly unlinkCostCenterMemberUseCase: UnlinkCostCenterMemberUseCase,
     private readonly transferCostCenterManagementUseCase: TransferCostCenterManagementUseCase,
+    private readonly costCenterAccessService: CostCenterAccessService,
   ) {}
 
   @Post()
@@ -110,7 +114,11 @@ export class CostCentersController {
   }
 
   @Get('summary')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(
+    CompanyMemberRole.REQUESTER,
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+  )
   @ApiOperation({
     summary: 'Listar Centros de Custo com gestor, equipe e orçamento',
     description:
@@ -260,13 +268,29 @@ export class CostCentersController {
   }
 
   @Get(':id/members')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(
+    CompanyMemberRole.REQUESTER,
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+  )
   @ApiOperation({ summary: 'Listar membros vinculados ao Centro de Custo' })
   @ApiResponse({ status: 200, type: [CostCenterMemberResponseDto] })
   async listMembers(
     @CurrentCompany() companyId: string,
+    @CurrentMember() memberId: string,
+    @CurrentUser('role') role: CompanyMemberRole,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<CostCenterMemberResponseDto[]> {
+    const costCenter = await this.findCostCenterByIdUseCase.execute(
+      id,
+      companyId,
+    );
+    await this.costCenterAccessService.assertCanRequest(
+      costCenter,
+      memberId,
+      role,
+    );
+
     const links = await this.listCostCenterMembersUseCase.execute(
       id,
       companyId,

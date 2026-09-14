@@ -31,6 +31,7 @@ export interface CreatePurchaseOrderData {
 
 export interface ListPurchaseOrdersFilter {
   companyId: string;
+  requesterId?: string;
   status?: PurchaseOrderStatus[];
   supplierId?: string;
   search?: string;

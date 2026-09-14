@@ -52,6 +52,7 @@ export class ListRequestsUseCase {
     if (view === RequestView.PENDING_FOR_ME) {
       return this.purchaseRequestRepository.list({
         visibility,
+        awaitingApproverId: actor.memberId,
         status: [RequestStatus.PENDING],
         costCenterId: query.costCenterId,
         supplierId: query.supplierId,
