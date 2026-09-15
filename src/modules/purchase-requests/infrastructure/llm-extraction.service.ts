@@ -17,20 +17,24 @@ import { IRequestFileRepository } from '../domain/request-files.repository.inter
 function buildSystemPrompt(categoryNames: string[]): string {
   const categoryRule =
     categoryNames.length > 0
-      ? `- categoryName: escolha a mais adequada entre estas categorias da empresa: ${categoryNames.join(', ')}. Use exatamente o nome da lista. null se nenhuma servir.`
-      : '- categoryName: a categoria de compra do documento. null se não encontrar.';
+      ? `- categoryName: deduza pelo que está sendo comprado e escolha a mais adequada entre estas categorias da empresa: ${categoryNames.join(', ')}. Use exatamente o nome da lista. null se nenhuma servir.`
+      : '- categoryName: a categoria de compra. null se não der para deduzir.';
 
-  return `Você extrai dados de documentos de compra brasileiros.
+  return `Você extrai dados de pedidos de compra brasileiros.
+O texto pode ser um orçamento completo, um e-mail do fornecedor ou só uma frase curta de quem precisa comprar algo, como "preciso de 5 licenças do Figma para o time de design".
 Responda APENAS com JSON no formato:
-{"title":string|null,"description":string|null,"supplierCnpj":string|null,"supplierName":string|null,"totalAmountCents":string|null,"categoryName":string|null,"paymentTerms":string|null,"items":[{"description":string,"quantity":string,"unit":string,"unitPriceCents":string}]}
+{"title":string|null,"description":string|null,"supplierCnpj":string|null,"supplierName":string|null,"totalAmountCents":string|null,"categoryName":string|null,"paymentTerms":string|null,"items":[{"description":string,"quantity":string|null,"unit":string|null,"unitPriceCents":string|null}]}
 Regras:
-- title: resumo curto do que está sendo comprado, até 80 caracteres, sem a palavra "solicitação". Ex: "26 computadores Dell".
-- description: o contexto que ajuda quem vai aprovar a decidir, em 1 ou 2 frases. Diga o que é, para que serve e o que justifica a compra. Escreva com as suas palavras, resumindo o documento.
+- Preencha tudo o que o texto permite concluir com segurança, mesmo quando ele é curto ou incompleto. O que não der para saber fica null.
+- title: resumo curto do que está sendo comprado, até 80 caracteres, sem a palavra "solicitação". Ex: "5 licenças do Figma".
+- description: 1 ou 2 frases para quem vai aprovar: o que é, para quem ou para que serve e o que justifica a compra. Use só o que o texto diz, com as suas palavras.
 ${categoryRule}
-- supplierCnpj: apenas os 14 dígitos, sem máscara. null se não encontrar.
-- totalAmountCents: o valor total em centavos, como string de dígitos. R$ 1.234,56 vira "123456". null se não encontrar.
-- items: as linhas de produto ou serviço do documento. quantity e unitPriceCents como string de dígitos, unitPriceCents em centavos. Use [] se o documento não listar itens.
-- Nunca invente dado que não está no documento. Campo ausente é null.`;
+- supplierName: a empresa que vende, quando o texto disser. O nome de um produto ou marca sozinho não é fornecedor. null se nenhum fornecedor for citado.
+- supplierCnpj: apenas os 14 dígitos, sem máscara. null se não houver.
+- totalAmountCents: o valor total em centavos, como string de dígitos. R$ 1.234,56 vira "123456". null se o texto não trouxer valor.
+- paymentTerms: a condição de pagamento, como "30 dias" ou "boleto à vista". null se não houver.
+- items: cada produto ou serviço pedido, mesmo sem preço. quantity como string de dígitos ("1" se o texto não disser). unit curta, como "un", "licença", "mês" ou "hora". unitPriceCents em centavos só quando o texto trouxer o preço de cada um, senão null. Use [] se não der para identificar o que está sendo pedido.
+- Nunca invente preço, CNPJ, fornecedor ou condição de pagamento que não estejam no texto.`;
 }
 
 const MAX_TEXT_LENGTH = 20000;
@@ -71,17 +75,20 @@ function parseItems(value: unknown): ExtractedItem[] {
 
       const row = raw as Record<string, unknown>;
       const description = asNullableString(row.description);
-      const unitPriceCents = digitsOrNull(row.unitPriceCents);
 
-      if (!description || !unitPriceCents || unitPriceCents === '0') {
+      if (!description) {
         return null;
       }
 
+      const quantity = digitsOrNull(row.quantity);
+      const unitPriceCents = digitsOrNull(row.unitPriceCents);
+
       return {
         description: description.slice(0, 200),
-        quantity: digitsOrNull(row.quantity) ?? '1',
+        quantity: quantity && quantity !== '0' ? quantity : '1',
         unit: asNullableString(row.unit)?.slice(0, 20) ?? 'un',
-        unitPriceCents,
+        unitPriceCents:
+          unitPriceCents && unitPriceCents !== '0' ? unitPriceCents : null,
       };
     })
     .filter((item): item is ExtractedItem => item !== null);
@@ -204,7 +211,7 @@ export class LlmExtractionService implements IExtractionService {
       };
     } catch (error) {
       if (error instanceof LlmUnavailableError) {
-        return this.failed(error.message);
+        return this.failed(error.message, true);
       }
 
       this.logger.error(`Falha inesperada na extração: ${String(error)}`);
@@ -212,7 +219,7 @@ export class LlmExtractionService implements IExtractionService {
     }
   }
 
-  private failed(reason: string): ExtractionResult {
+  private failed(reason: string, retryable = false): ExtractionResult {
     this.logger.warn(`Extração falhou: ${reason}`);
 
     return {
@@ -220,6 +227,7 @@ export class LlmExtractionService implements IExtractionService {
       fields: null,
       failureReason: reason,
       extractedAt: null,
+      retryable,
     };
   }
 }

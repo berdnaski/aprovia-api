@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { hash } from 'bcryptjs';
 import {
   Prisma,
   PrismaClient,
@@ -30,6 +31,8 @@ const prisma = new PrismaClient({
 });
 
 const DEMO_CNPJ = '48219700000155';
+const DEMO_PASSWORD = 'Demo@2026';
+const DIRECTOR_EMAIL = 'roberto.almeida@nortis.demo';
 
 const routing = new ApprovalRoutingService();
 
@@ -254,7 +257,8 @@ ${details}
 </nfeProc>`;
 }
 
-type PersonKey = 'ana' | 'caio' | 'rita' | 'marina' | 'bruno' | 'julia';
+type PersonKey =
+  'roberto' | 'ana' | 'caio' | 'rita' | 'marina' | 'bruno' | 'julia';
 
 type Stage =
   | 'ORDER_SENT'
@@ -296,6 +300,51 @@ interface Cycle {
 }
 
 const SUPPLIERS = [
+  {
+    cnpjRoot: '337104850001',
+    legalName: 'Monteiro Vasconcellos Auditores Independentes S/S',
+    tradeName: 'Monteiro Vasconcellos',
+    city: 'São Paulo',
+    state: 'SP',
+    street: 'Av. Brigadeiro Faria Lima, 3477 - Itaim Bibi',
+    zipCode: '04538133',
+    email: 'propostas@mvauditores.com.br',
+    phone: '1130457720',
+    registrationStatus: RegistrationStatus.ACTIVE,
+    validationStatus: ValidationStatus.VALIDATED,
+    validatedDaysAgo: 40,
+    blocked: false,
+  },
+  {
+    cnpjRoot: '192883460001',
+    legalName: 'Arbor Consultoria Tributária LTDA',
+    tradeName: 'Arbor Tributária',
+    city: 'Porto Alegre',
+    state: 'RS',
+    street: 'Av. Carlos Gomes, 700 - Boa Vista',
+    zipCode: '90480000',
+    email: 'contato@arbortributaria.com.br',
+    phone: '5132270418',
+    registrationStatus: RegistrationStatus.ACTIVE,
+    validationStatus: ValidationStatus.VALIDATED,
+    validatedDaysAgo: 50,
+    blocked: false,
+  },
+  {
+    cnpjRoot: '255601930001',
+    legalName: 'Selo Digital Certificação LTDA',
+    tradeName: 'Selo Digital',
+    city: 'Curitiba',
+    state: 'PR',
+    street: 'Rua Marechal Deodoro, 630 - Centro',
+    zipCode: '80010010',
+    email: 'atendimento@selodigital.com.br',
+    phone: '4130294410',
+    registrationStatus: RegistrationStatus.ACTIVE,
+    validationStatus: ValidationStatus.VALIDATED,
+    validatedDaysAgo: 25,
+    blocked: false,
+  },
   {
     cnpjRoot: '210582000001',
     legalName: 'Prime TI Serviços e Licenciamento LTDA',
@@ -374,6 +423,202 @@ const SUPPLIERS = [
 ];
 
 const CYCLES: Cycle[] = [
+  {
+    number: 'REQ-2026-0025',
+    requester: 'bruno',
+    costCenter: 'Facilities',
+    category: 'Infraestrutura',
+    supplier: 'Construmax',
+    title: 'Reforma do refeitório',
+    description:
+      'Troca do piso, das bancadas e da iluminação do refeitório do térreo, interditado parcialmente no último laudo da vigilância sanitária.',
+    urgency: Urgency.HIGH,
+    paymentTerms: '30 dias',
+    paymentTermDays: 30,
+    createdDaysAgo: 6,
+    items: [
+      {
+        description: 'Porcelanato antiderrapante 60x60',
+        quantity: 180,
+        unit: 'm2',
+        unitPrice: 95,
+        ncm: '69072100',
+        cfop: '5102',
+      },
+      {
+        description: 'Bancada em granito com cuba',
+        quantity: 4,
+        unit: 'un',
+        unitPrice: 3225,
+        ncm: '68029390',
+        cfop: '5102',
+      },
+      {
+        description: 'Luminária LED hermética',
+        quantity: 40,
+        unit: 'un',
+        unitPrice: 200,
+        ncm: '94054090',
+        cfop: '5102',
+      },
+    ],
+    stage: 'ORDER_SENT',
+    deliveryAddress: 'Av. Paulista, 1842 - Térreo - São Paulo/SP',
+  },
+  {
+    number: 'REQ-2026-0018',
+    requester: 'ana',
+    costCenter: 'Operações',
+    category: 'Serviços',
+    supplier: 'Arbor Tributária',
+    title: 'Recuperação de créditos de PIS e COFINS',
+    description:
+      'Revisão dos últimos cinco anos de apuração para recuperar créditos de PIS e COFINS sobre os insumos da obra. A consultoria estima um crédito acima de R$ 400 mil.',
+    urgency: Urgency.MEDIUM,
+    paymentTerms: '30 dias',
+    paymentTermDays: 30,
+    createdDaysAgo: 44,
+    items: [
+      {
+        description: 'Diagnóstico fiscal dos últimos 5 anos',
+        quantity: 1,
+        unit: 'sv',
+        unitPrice: 12000,
+        ncm: '00000000',
+        cfop: '5933',
+      },
+      {
+        description: 'Retificação das obrigações e pedido de compensação',
+        quantity: 1,
+        unit: 'sv',
+        unitPrice: 24000,
+        ncm: '00000000',
+        cfop: '5933',
+      },
+    ],
+    stage: 'MATCHED',
+    payment: 'PAID',
+    deliveryAddress: 'Av. Paulista, 1842 - 6º andar - São Paulo/SP',
+  },
+  {
+    number: 'REQ-2026-0019',
+    requester: 'ana',
+    costCenter: 'Facilities',
+    category: 'Equipamentos',
+    supplier: 'Móveis Sul',
+    title: 'Mobiliário da sala do financeiro',
+    description:
+      'O financeiro mudou para o 6º andar e hoje divide mesas com o comercial. Mesa de reunião para o fechamento mensal, cadeiras e arquivo para os documentos fiscais.',
+    urgency: Urgency.MEDIUM,
+    paymentTerms: '30 dias',
+    paymentTermDays: 30,
+    createdDaysAgo: 30,
+    items: [
+      {
+        description: 'Mesa de reunião 2,40m em MDF',
+        quantity: 1,
+        unit: 'un',
+        unitPrice: 4800,
+        ncm: '94033000',
+        cfop: '5102',
+      },
+      {
+        description: 'Cadeira executiva com apoio de braço',
+        quantity: 8,
+        unit: 'un',
+        unitPrice: 1190,
+        ncm: '94013000',
+        cfop: '5102',
+      },
+      {
+        description: 'Arquivo de aço 4 gavetas',
+        quantity: 2,
+        unit: 'un',
+        unitPrice: 1340,
+        ncm: '94031000',
+        cfop: '5102',
+      },
+    ],
+    stage: 'MATCHED',
+    payment: 'RELEASED',
+    deliveryAddress: 'Av. Paulista, 1842 - 6º andar - São Paulo/SP',
+  },
+  {
+    number: 'REQ-2026-0020',
+    requester: 'ana',
+    costCenter: 'Tecnologia',
+    category: 'Software',
+    supplier: 'Selo Digital',
+    title: 'Certificados digitais da empresa e da diretoria',
+    description:
+      'O e-CNPJ vence no fim do mês e sem ele o financeiro não transmite o SPED nem emite nota. Renovação com token para os dois responsáveis legais.',
+    urgency: Urgency.HIGH,
+    paymentTerms: '15 dias',
+    paymentTermDays: 15,
+    createdDaysAgo: 21,
+    items: [
+      {
+        description: 'Certificado e-CNPJ A3 - 3 anos',
+        quantity: 2,
+        unit: 'un',
+        unitPrice: 690,
+        ncm: '85234990',
+        cfop: '5102',
+      },
+      {
+        description: 'Token criptográfico USB',
+        quantity: 2,
+        unit: 'un',
+        unitPrice: 145,
+        ncm: '84717019',
+        cfop: '5102',
+      },
+      {
+        description: 'Certificado e-CPF A3 - 3 anos',
+        quantity: 2,
+        unit: 'un',
+        unitPrice: 290,
+        ncm: '85234990',
+        cfop: '5102',
+      },
+    ],
+    stage: 'INVOICED',
+    deliveryAddress: 'Av. Paulista, 1842 - 6º andar - São Paulo/SP',
+  },
+  {
+    number: 'REQ-2026-0021',
+    requester: 'ana',
+    costCenter: 'Tecnologia',
+    category: 'Software',
+    supplier: 'Prime TI',
+    title: 'Sistema de conciliação bancária',
+    description:
+      'Hoje a conciliação dos quatro bancos é feita em planilha e toma três dias do fechamento. Licença anual com integração ao banco que financia a obra.',
+    urgency: Urgency.MEDIUM,
+    paymentTerms: '30 dias',
+    paymentTermDays: 30,
+    createdDaysAgo: 11,
+    items: [
+      {
+        description: 'Licença de conciliação bancária - 12 meses',
+        quantity: 12,
+        unit: 'un',
+        unitPrice: 1450,
+        ncm: '85234910',
+        cfop: '5102',
+      },
+      {
+        description: 'Implantação e integração bancária',
+        quantity: 1,
+        unit: 'sv',
+        unitPrice: 3600,
+        ncm: '00000000',
+        cfop: '5933',
+      },
+    ],
+    stage: 'ORDER_SENT',
+    deliveryAddress: 'Entrega digital - acesso por e-mail',
+  },
   {
     number: 'REQ-1026',
     requester: 'marina',
@@ -616,7 +861,6 @@ const CYCLES: Cycle[] = [
       quantity: 1,
       reason: 'Uma unidade chegou com a carcaça amassada e a porta 1 sem link.',
     },
-    payment: 'BLOCKED',
     deliveryAddress: 'Av. Paulista, 1842 - Data center - São Paulo/SP',
   },
   {
@@ -761,6 +1005,94 @@ interface OpenRequest {
 }
 
 const OPEN_REQUESTS: OpenRequest[] = [
+  {
+    number: 'REQ-2026-0022',
+    requester: 'ana',
+    costCenter: 'Operações',
+    category: 'Serviços',
+    supplier: 'Monteiro Vasconcellos',
+    title: 'Auditoria externa das demonstrações de 2026',
+    description:
+      'Exigência do contrato de financiamento da obra BR-101. O banco pede parecer de auditoria independente até março, e a revisão intermediária precisa começar em outubro.',
+    urgency: Urgency.HIGH,
+    paymentTerms: '50% no início e 50% na entrega do parecer',
+    createdDaysAgo: 1,
+    items: [
+      {
+        description: 'Planejamento e revisão intermediária',
+        quantity: 1,
+        unit: 'sv',
+        unitPrice: 18000,
+        ncm: '00000000',
+        cfop: '5933',
+      },
+      {
+        description: 'Auditoria final e emissão do parecer',
+        quantity: 1,
+        unit: 'sv',
+        unitPrice: 30000,
+        ncm: '00000000',
+        cfop: '5933',
+      },
+    ],
+    outcome: 'PENDING',
+  },
+  {
+    number: 'REQ-2026-0023',
+    requester: 'ana',
+    costCenter: 'Operações',
+    category: 'Serviços',
+    supplier: 'Arbor Tributária',
+    title: 'Treinamento da equipe em reforma tributária',
+    description:
+      'Curso para as quatro pessoas do fiscal entenderem a transição para CBS e IBS, que muda a apuração a partir de 2027.',
+    urgency: Urgency.LOW,
+    paymentTerms: '30 dias',
+    createdDaysAgo: 5,
+    items: [
+      {
+        description: 'Curso de reforma tributária - 24 horas',
+        quantity: 4,
+        unit: 'vg',
+        unitPrice: 1950,
+        ncm: '00000000',
+        cfop: '5933',
+      },
+    ],
+    outcome: 'CHANGES_REQUESTED',
+    justification:
+      'Antes de aprovar, confirme se o curso cobre a regra de transição de 2027 e mande a grade de horas. Veja também se dá para incluir o time de contas a pagar na mesma turma.',
+  },
+  {
+    number: 'REQ-2026-0024',
+    requester: 'ana',
+    costCenter: 'Facilities',
+    category: 'Equipamentos',
+    title: 'Impressora multifuncional para o financeiro',
+    description:
+      'Impressora com digitalização frente e verso para os documentos do fechamento mensal.',
+    urgency: Urgency.LOW,
+    createdDaysAgo: 0,
+    items: [
+      {
+        description: 'Impressora multifuncional laser duplex',
+        quantity: 1,
+        unit: 'un',
+        unitPrice: 3290,
+        ncm: '84433111',
+        cfop: '5102',
+      },
+      {
+        description: 'Toner de reposição',
+        quantity: 2,
+        unit: 'un',
+        unitPrice: 420,
+        ncm: '84439933',
+        cfop: '5102',
+      },
+    ],
+    outcome: 'DRAFT',
+  },
   {
     number: 'REQ-2026-0010',
     requester: 'marina',
@@ -1021,6 +1353,36 @@ async function main(): Promise<void> {
 
   const company = found;
 
+  const director = await prisma.user.upsert({
+    where: { email: DIRECTOR_EMAIL },
+    update: {},
+    create: {
+      name: 'Roberto Almeida',
+      email: DIRECTOR_EMAIL,
+      password_hash: await hash(DEMO_PASSWORD, 12),
+      email_verified: true,
+      terms_accepted_at: daysAgo(60),
+    },
+  });
+
+  const directorMember =
+    (await prisma.companyMember.findFirst({
+      where: { company_id: company.id, user_id: director.id },
+    })) ??
+    (await prisma.companyMember.create({
+      data: {
+        user_id: director.id,
+        company_id: company.id,
+        role: CompanyMemberRole.APPROVER,
+        approval_limit_cents: cents(500_000),
+      },
+    }));
+
+  await prisma.companyMember.updateMany({
+    where: { company_id: company.id, user: { email: 'ana.lima@nortis.demo' } },
+    data: { manager_id: directorMember.id },
+  });
+
   const memberRows = await prisma.companyMember.findMany({
     where: { company_id: company.id },
     include: { user: { select: { name: true } } },
@@ -1028,6 +1390,7 @@ async function main(): Promise<void> {
 
   const members = new Map<PersonKey, MemberRow>();
   const byFirstName: Record<string, PersonKey> = {
+    Roberto: 'roberto',
     Ana: 'ana',
     Caio: 'caio',
     Rita: 'rita',

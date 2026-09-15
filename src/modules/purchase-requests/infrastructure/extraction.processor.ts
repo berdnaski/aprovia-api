@@ -10,6 +10,9 @@ import {
   IExtractionService,
 } from '../domain/extraction.service';
 
+const PROVIDER_UNAVAILABLE_MESSAGE =
+  'A leitura assistida está demorando mais que o normal. Tente de novo em instantes ou preencha os campos na mão.';
+
 @Processor(QueueName.AI_EXTRACTION)
 export class ExtractionProcessor extends WorkerHost {
   private readonly logger = new Logger(ExtractionProcessor.name);
@@ -28,10 +31,23 @@ export class ExtractionProcessor extends WorkerHost {
       fileId: job.data.fileId,
     });
 
+    const attempts = job.opts.attempts ?? 1;
+    const attempt = job.attemptsMade + 1;
+
+    if (result.retryable && attempt < attempts) {
+      this.logger.warn(
+        `Extração do pedido ${job.data.requestId} falhou na tentativa ${attempt} de ${attempts} e volta para a fila: ${result.failureReason}`,
+      );
+
+      throw new Error(result.failureReason ?? 'Provedor de IA indisponível');
+    }
+
     await this.extractionResultRepository.complete(job.data.extractionId, {
       status: result.status,
       fields: result.fields,
-      failureReason: result.failureReason,
+      failureReason: result.retryable
+        ? PROVIDER_UNAVAILABLE_MESSAGE
+        : result.failureReason,
     });
 
     this.logger.log(

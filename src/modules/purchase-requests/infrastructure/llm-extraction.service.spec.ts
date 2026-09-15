@@ -15,13 +15,15 @@ const completionOf = (content: string): LlmCompletionResult => ({
   completionTokens: 10,
 });
 
-const build = (complete: ILlmClient['complete'], categoryNames: string[] = []) => {
+const build = (
+  complete: ILlmClient['complete'],
+  categoryNames: string[] = [],
+) => {
   const llmClient = { complete };
   const storageService = {} as IStorageService;
   const fileRepository = {} as IRequestFileRepository;
   const categoryRepository = {
-    list: () =>
-      Promise.resolve(categoryNames.map((name) => ({ name }))),
+    list: () => Promise.resolve(categoryNames.map((name) => ({ name }))),
   } as unknown as ICategoryRepository;
 
   return new LlmExtractionService(
@@ -59,6 +61,7 @@ describe('LlmExtractionService', () => {
     expect(result.status).toBe(ExtractionStatus.FAILED);
     expect(result.fields).toBeNull();
     expect(result.failureReason).toContain('timeout');
+    expect(result.retryable).toBe(true);
   });
 
   it('resposta malformada devolve FAILED em vez de dado inventado', async () => {
@@ -126,5 +129,59 @@ describe('LlmExtractionService', () => {
     const result = await service.extract('company-1', { text: 'nota' });
 
     expect(result.status).toBe(ExtractionStatus.FAILED);
+  });
+
+  it('texto curto sem preço vira item com quantidade e preço em aberto', async () => {
+    const service = build(() =>
+      Promise.resolve(
+        completionOf(
+          '{"title":"10 acessos do Claude Code","categoryName":"Software","items":[{"description":"Acesso mensal ao Claude Code","quantity":"10","unit":"acesso","unitPriceCents":null}]}',
+        ),
+      ),
+    );
+
+    const result = await service.extract('company-1', {
+      text: 'Solicito 10 acessos mensais do claude code pra equipe de desenvolvimento',
+    });
+
+    expect(result.status).toBe(ExtractionStatus.SUCCEEDED);
+    expect(result.fields?.title).toBe('10 acessos do Claude Code');
+    expect(result.fields?.items).toEqual([
+      {
+        description: 'Acesso mensal ao Claude Code',
+        quantity: '10',
+        unit: 'acesso',
+        unitPriceCents: null,
+      },
+    ]);
+  });
+
+  it('preço zero e quantidade ausente não viram dado falso', async () => {
+    const service = build(() =>
+      Promise.resolve(
+        completionOf(
+          '{"items":[{"description":"Headset","quantity":null,"unit":null,"unitPriceCents":"0"}]}',
+        ),
+      ),
+    );
+
+    const result = await service.extract('company-1', { text: 'headset' });
+
+    expect(result.fields?.items).toEqual([
+      {
+        description: 'Headset',
+        quantity: '1',
+        unit: 'un',
+        unitPriceCents: null,
+      },
+    ]);
+  });
+
+  it('resposta malformada não é tratada como falha passageira', async () => {
+    const service = build(() => Promise.resolve(completionOf('sem json')));
+
+    const result = await service.extract('company-1', { text: 'nota' });
+
+    expect(result.retryable).toBe(false);
   });
 });

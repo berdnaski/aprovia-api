@@ -22,6 +22,13 @@ interface DeepSeekResponse {
   usage?: DeepSeekUsage;
 }
 
+function isTimeout(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'TimeoutError' || error.name === 'AbortError')
+  );
+}
+
 @Injectable()
 export class DeepSeekLlmClient implements ILlmClient {
   private readonly logger = new Logger(DeepSeekLlmClient.name);
@@ -65,10 +72,9 @@ export class DeepSeekLlmClient implements ILlmClient {
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      const reason =
-        error instanceof Error && error.name === 'TimeoutError'
-          ? `timeout de ${timeoutMs}ms`
-          : (error as Error).message;
+      const reason = isTimeout(error)
+        ? `timeout de ${timeoutMs}ms`
+        : (error as Error).message;
 
       this.logger.warn(`Falha ao chamar DeepSeek: ${reason}`);
       throw new LlmUnavailableError(reason);
@@ -83,7 +89,14 @@ export class DeepSeekLlmClient implements ILlmClient {
 
     try {
       payload = (await response.json()) as DeepSeekResponse;
-    } catch {
+    } catch (error) {
+      if (isTimeout(error)) {
+        this.logger.warn(
+          `DeepSeek começou a responder mas não terminou em ${timeoutMs}ms`,
+        );
+        throw new LlmUnavailableError(`timeout de ${timeoutMs}ms`);
+      }
+
       throw new LlmUnavailableError('resposta não é JSON válido');
     }
 

@@ -7,7 +7,7 @@ export interface ExtractedItem {
   description: string;
   quantity: string;
   unit: string;
-  unitPriceCents: string;
+  unitPriceCents: string | null;
 }
 
 export interface ExtractedFields {
@@ -35,6 +35,7 @@ export interface ExtractionResult {
   fields: ExtractedFields | null;
   failureReason: string | null;
   extractedAt: Date | null;
+  retryable?: boolean;
 }
 
 export const EMPTY_EXTRACTION: ExtractedFields = {

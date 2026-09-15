@@ -42,6 +42,10 @@ import {
   FindRequestByIdUseCase,
   RequestActor,
 } from './find-request-by-id.use-case';
+import {
+  GetRequestBudgetUseCase,
+  RequestBudgetVerdict,
+} from './get-request-budget.use-case';
 import { NotifyPendingApprovalUseCase } from './notify-pending-approval.use-case';
 
 export type DecideRequestInput = DecideRequestDto & {
@@ -67,6 +71,7 @@ export class DecideRequestUseCase {
     private readonly budgetRepository: IBudgetRepository,
     private readonly budgetEntryRepository: IBudgetEntryRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
+    private readonly getRequestBudgetUseCase: GetRequestBudgetUseCase,
     private readonly assertSupplierUsableUseCase: AssertSupplierUsableUseCase,
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
@@ -102,6 +107,31 @@ export class DecideRequestUseCase {
       throw new ValidationError(
         `Explique o motivo desta decisão em pelo menos ${MIN_JUSTIFICATION} caracteres. Quem criou o pedido vai ler esta justificativa.`,
       );
+    }
+
+    const approving =
+      data.type === DecisionType.APPROVED ||
+      data.type === DecisionType.APPROVED_WITH_OVERRIDE;
+
+    if (approving) {
+      const budget = await this.getRequestBudgetUseCase.forRequest(
+        request,
+        actor.companyId,
+      );
+      const overBudget =
+        budget.verdict === RequestBudgetVerdict.REQUIRES_OVERRIDE;
+
+      if (overBudget && data.type === DecisionType.APPROVED) {
+        throw new ValidationError(
+          'Este pedido passa do que sobra no orçamento do centro de custo. Para aprovar, escolha aprovar com ressalva e explique o motivo.',
+        );
+      }
+
+      if (!overBudget && data.type === DecisionType.APPROVED_WITH_OVERRIDE) {
+        throw new ValidationError(
+          'Este pedido cabe no orçamento do centro de custo. Aprove normalmente, sem ressalva.',
+        );
+      }
     }
 
     const waiting = await this.approvalStepWriter.findWaiting(requestId);

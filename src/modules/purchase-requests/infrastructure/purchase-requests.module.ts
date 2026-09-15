@@ -17,6 +17,7 @@ import { ListRequestsUseCase } from '../application/list-requests.use-case';
 import { ManageRequestFilesUseCase } from '../application/manage-request-files.use-case';
 import { ManageRequestItemsUseCase } from '../application/manage-request-items.use-case';
 import { GetExtractionResultUseCase } from '../application/get-extraction-result.use-case';
+import { GetRequestBudgetUseCase } from '../application/get-request-budget.use-case';
 import { GetRequestTimelineUseCase } from '../application/get-request-timeline.use-case';
 import { RequestExtractionUseCase } from '../application/request-extraction.use-case';
 import { CancelRequestUseCase } from '../application/cancel-request.use-case';
@@ -97,6 +98,7 @@ import { RequestItemRepository } from './request-items.repository';
     RequestExtractionUseCase,
     GetExtractionResultUseCase,
     GetRequestTimelineUseCase,
+    GetRequestBudgetUseCase,
     SubmitRequestUseCase,
     DecideRequestUseCase,
     CancelRequestUseCase,

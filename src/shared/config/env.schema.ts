@@ -81,7 +81,7 @@ export class EnvSchema {
   @IsInt()
   @Min(1000)
   @Max(120000)
-  AI_EXTRACTION_TIMEOUT_MS = 20000;
+  AI_EXTRACTION_TIMEOUT_MS = 45000;
 }
 
 const NUMERIC_KEYS: readonly (keyof EnvSchema)[] = [

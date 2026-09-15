@@ -28,6 +28,7 @@ import {
   FindRequestByIdUseCase,
   RequestActor,
 } from '../application/find-request-by-id.use-case';
+import { GetRequestBudgetUseCase } from '../application/get-request-budget.use-case';
 import { GetRequestTimelineUseCase } from '../application/get-request-timeline.use-case';
 import {
   ListRequestsUseCase,
@@ -42,6 +43,7 @@ import { DecideRequestDto } from '../dto/decide-request.dto';
 import { ListRequestsQueryDto } from '../dto/list-requests-query.dto';
 import { PurchaseRequestResponseDto } from '../dto/purchase-request-response.dto';
 import { ReassignStepDto } from '../dto/reassign-step.dto';
+import { RequestBudgetResponseDto } from '../dto/request-budget-response.dto';
 import { RequestTimelineResponseDto } from '../dto/request-timeline-response.dto';
 import { SubmitRequestDto } from '../dto/submit-request.dto';
 import { UpdateDraftDto } from '../dto/update-draft.dto';
@@ -59,6 +61,7 @@ export class PurchaseRequestsController {
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
     private readonly listRequestsUseCase: ListRequestsUseCase,
     private readonly getRequestTimelineUseCase: GetRequestTimelineUseCase,
+    private readonly getRequestBudgetUseCase: GetRequestBudgetUseCase,
     private readonly submitRequestUseCase: SubmitRequestUseCase,
     private readonly decideRequestUseCase: DecideRequestUseCase,
     private readonly cancelRequestUseCase: CancelRequestUseCase,
@@ -141,6 +144,22 @@ export class PurchaseRequestsController {
   ): Promise<RequestTimelineResponseDto> {
     const timeline = await this.getRequestTimelineUseCase.execute(id, actor);
     return RequestTimelineResponseDto.fromTimeline(timeline);
+  }
+
+  @Get(':id/budget')
+  @Roles(...ALL_ROLES)
+  @ApiOperation({
+    summary: 'Situação do pedido no orçamento do centro de custo',
+    description:
+      'Calcula na hora, com a tolerância da empresa, se o pedido cabe no que sobra do orçamento do mês. Quando passa da tolerância, a decisão só aceita aprovação com ressalva.',
+  })
+  @ApiResponse({ status: 200, type: RequestBudgetResponseDto })
+  async budget(
+    @CurrentActor() actor: RequestActor,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<RequestBudgetResponseDto> {
+    const budget = await this.getRequestBudgetUseCase.execute(id, actor);
+    return RequestBudgetResponseDto.fromBudget(budget);
   }
 
   @Patch(':id')
