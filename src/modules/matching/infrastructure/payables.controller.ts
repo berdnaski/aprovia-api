@@ -25,9 +25,11 @@ import { Roles } from 'src/shared/decorators/roles.decorator';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
 import { ListPayablesUseCase } from '../application/list-payables.use-case';
 import { MarkPayableAsPaidUseCase } from '../application/mark-payable-as-paid.use-case';
+import { ReleasePayableUseCase } from '../application/release-payable.use-case';
 import { ReleasePayableWithoutInvoiceUseCase } from '../application/release-payable-without-invoice.use-case';
 import { ListPayablesQueryDto } from '../dto/list-payables-query.dto';
 import { PayableResponseDto } from '../dto/payable-response.dto';
+import { ReleasePayableDto } from '../dto/release-payable.dto';
 import { ReleasePayableWithoutInvoiceDto } from '../dto/release-payable-without-invoice.dto';
 
 interface UploadedFileLike {
@@ -45,6 +47,7 @@ export class PayablesController {
   constructor(
     private readonly listPayablesUseCase: ListPayablesUseCase,
     private readonly markPayableAsPaidUseCase: MarkPayableAsPaidUseCase,
+    private readonly releasePayableUseCase: ReleasePayableUseCase,
     private readonly releasePayableWithoutInvoiceUseCase: ReleasePayableWithoutInvoiceUseCase,
   ) {}
 
@@ -74,6 +77,28 @@ export class PayablesController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PayableResponseDto> {
     const payable = await this.markPayableAsPaidUseCase.execute(id, actor);
+
+    return PayableResponseDto.fromEntity(payable);
+  }
+
+  @Post(':id/release')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @ApiOperation({
+    summary: 'Liberar o pagamento de uma nota conferida',
+    description:
+      'Para a conta que ficou aguardando liberação porque a empresa não libera sozinha quando a conferência bate. Só vale para nota com conferência aprovada.',
+  })
+  @ApiResponse({ status: 201, type: PayableResponseDto })
+  async release(
+    @CurrentActor() actor: RequestActor,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReleasePayableDto,
+  ): Promise<PayableResponseDto> {
+    const payable = await this.releasePayableUseCase.execute(
+      id,
+      actor,
+      dto.note,
+    );
 
     return PayableResponseDto.fromEntity(payable);
   }

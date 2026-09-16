@@ -10,6 +10,7 @@ import { ListMatchResultsUseCase } from '../application/list-match-results.use-c
 import { ListPayablesUseCase } from '../application/list-payables.use-case';
 import { MarkPayableAsPaidUseCase } from '../application/mark-payable-as-paid.use-case';
 import { OverrideMatchUseCase } from '../application/override-match.use-case';
+import { ReleasePayableUseCase } from '../application/release-payable.use-case';
 import { ReleasePayableWithoutInvoiceUseCase } from '../application/release-payable-without-invoice.use-case';
 import { RunMatchUseCase } from '../application/run-match.use-case';
 import { IMatchResultRepository } from '../domain/matching.repository.interface';
@@ -41,6 +42,7 @@ import { PayableRepository } from './payables.repository';
     ListMatchResultsUseCase,
     ListPayablesUseCase,
     MarkPayableAsPaidUseCase,
+    ReleasePayableUseCase,
     ReleasePayableWithoutInvoiceUseCase,
   ],
   exports: [IMatchResultRepository, IPayableRepository],

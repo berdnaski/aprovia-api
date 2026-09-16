@@ -6,6 +6,7 @@ import { RequestActor } from 'src/modules/purchase-requests/application/find-req
 import { InvoiceEntity } from '../domain/invoice.entity';
 import { InvoiceAlreadyResolvedError } from '../domain/invoices.errors';
 import { IInvoiceRepository } from '../domain/invoices.repository.interface';
+import { linkInvoiceItems } from '../domain/item-matching';
 import { FindInvoiceByIdUseCase } from './find-invoice-by-id.use-case';
 
 @Injectable()
@@ -36,10 +37,27 @@ export class LinkInvoiceToOrderUseCase {
       actor.companyId,
     );
 
+    const invoiceItems = invoice.items ?? [];
+
+    const links = linkInvoiceItems(
+      invoiceItems.map((item) => ({
+        sequence: item.sequence,
+        description: item.description,
+      })),
+      (order.items ?? []).map((item) => ({
+        id: item.id,
+        description: item.description,
+      })),
+    );
+
     const linked = await this.invoiceRepository.linkToOrder(
       invoiceId,
       purchaseOrderId,
       order.supplierId,
+      invoiceItems.map((item) => ({
+        invoiceItemId: item.id,
+        purchaseOrderItemId: links.get(item.sequence) ?? null,
+      })),
     );
 
     await this.auditLogRepository.record({
@@ -48,7 +66,11 @@ export class LinkInvoiceToOrderUseCase {
       eventType: AuditEventType.INVOICE_UPLOADED,
       entityType: 'invoice',
       entityId: invoice.id,
-      newData: { purchaseOrderNumber: order.number },
+      newData: {
+        purchaseOrderNumber: order.number,
+        linkedItems: links.size,
+        totalItems: invoiceItems.length,
+      },
     });
 
     return linked;

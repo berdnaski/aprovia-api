@@ -33,6 +33,11 @@ export interface CreateInvoiceItemData {
   purchaseOrderItemId: string | null;
 }
 
+export interface InvoiceItemLink {
+  invoiceItemId: string;
+  purchaseOrderItemId: string | null;
+}
+
 export interface CreateInvoiceTaxData {
   kind: TaxKind;
   baseCents: bigint;
@@ -97,6 +102,7 @@ export abstract class IInvoiceRepository {
     id: string,
     purchaseOrderId: string,
     supplierId: string,
+    itemLinks: InvoiceItemLink[],
   ): Promise<InvoiceEntity>;
 
   abstract reject(

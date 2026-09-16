@@ -18,6 +18,14 @@ export class InvoiceItemResponseDto {
   @ApiProperty()
   sequence: number;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    type: String,
+    description:
+      'Item da ordem de compra com o qual este item da nota foi casado.',
+  })
+  purchaseOrderItemId: string | null;
+
   @ApiProperty()
   description: string;
 
@@ -47,6 +55,7 @@ export class InvoiceItemResponseDto {
 
     dto.id = entity.id;
     dto.sequence = entity.sequence;
+    dto.purchaseOrderItemId = entity.purchaseOrderItemId;
     dto.description = entity.description;
     dto.ncm = entity.ncm;
     dto.cfop = entity.cfop;

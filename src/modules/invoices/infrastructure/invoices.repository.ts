@@ -8,6 +8,7 @@ import { InvoiceEntity } from '../domain/invoice.entity';
 import {
   CreateInvoiceData,
   IInvoiceRepository,
+  InvoiceItemLink,
   ListInvoicesFilter,
 } from '../domain/invoices.repository.interface';
 import { InvoiceMapper } from './mappers/invoice.mapper';
@@ -155,11 +156,21 @@ export class InvoiceRepository implements IInvoiceRepository {
     id: string,
     purchaseOrderId: string,
     supplierId: string,
+    itemLinks: InvoiceItemLink[],
   ): Promise<InvoiceEntity> {
-    const raw = await this.prisma.invoice.update({
-      where: { id },
-      data: { purchase_order_id: purchaseOrderId, supplier_id: supplierId },
-      include: INCLUDE,
+    const raw = await this.prisma.$transaction(async (tx) => {
+      for (const link of itemLinks) {
+        await tx.invoiceItem.update({
+          where: { id: link.invoiceItemId },
+          data: { purchase_order_item_id: link.purchaseOrderItemId },
+        });
+      }
+
+      return tx.invoice.update({
+        where: { id },
+        data: { purchase_order_id: purchaseOrderId, supplier_id: supplierId },
+        include: INCLUDE,
+      });
     });
 
     return InvoiceMapper.toDomain(raw);

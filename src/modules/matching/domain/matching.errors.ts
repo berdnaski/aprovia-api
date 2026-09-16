@@ -39,11 +39,25 @@ export class PayableNotFoundError extends NotFoundError {
   }
 }
 
+const PAYABLE_STATUS_LABEL: Record<string, string> = {
+  RELEASED: 'já está liberada',
+  PAID: 'já foi paga',
+  CANCELED: 'foi cancelada',
+};
+
 export class PayableNotBlockedError extends InvalidStateError {
   constructor(status: string) {
     super(
-      `Esta conta a pagar não está bloqueada (status ${status}), não é preciso liberar novamente.`,
+      `Esta conta a pagar ${PAYABLE_STATUS_LABEL[status] ?? 'não está aguardando liberação'}, não há o que liberar.`,
       { status },
+    );
+  }
+}
+
+export class PayableConferralPendingError extends InvalidStateError {
+  constructor() {
+    super(
+      'A nota desta conta ainda não passou na conferência. Resolva a conferência antes de liberar o pagamento.',
     );
   }
 }

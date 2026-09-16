@@ -312,7 +312,7 @@ const SUPPLIERS = [
     phone: '1130457720',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 40,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -327,7 +327,7 @@ const SUPPLIERS = [
     phone: '5132270418',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 50,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -342,7 +342,7 @@ const SUPPLIERS = [
     phone: '4130294410',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 25,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -357,7 +357,7 @@ const SUPPLIERS = [
     phone: '1133218890',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 70,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -372,7 +372,7 @@ const SUPPLIERS = [
     phone: '8134420115',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 64,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -387,7 +387,7 @@ const SUPPLIERS = [
     phone: '3132915540',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 55,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -402,7 +402,7 @@ const SUPPLIERS = [
     phone: '4830258877',
     registrationStatus: RegistrationStatus.ACTIVE,
     validationStatus: ValidationStatus.VALIDATED,
-    validatedDaysAgo: 22,
+    validatedDaysAgo: 1,
     blocked: false,
   },
   {
@@ -417,7 +417,7 @@ const SUPPLIERS = [
     phone: '4734226690',
     registrationStatus: RegistrationStatus.INACTIVE,
     validationStatus: ValidationStatus.PENDING,
-    validatedDaysAgo: null,
+    validatedDaysAgo: 1,
     blocked: false,
   },
 ];
