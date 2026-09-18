@@ -17,8 +17,11 @@ import { CurrentCompany } from 'src/shared/decorators/current-company.decorator'
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { ExportRequestsUseCase } from '../application/export-requests.use-case';
 import { GetDashboardUseCase } from '../application/get-dashboard.use-case';
+import { GetDreUseCase } from '../application/get-dre.use-case';
 import { DashboardQueryDto } from '../dto/dashboard-query.dto';
 import { DashboardResponseDto } from '../dto/dashboard-response.dto';
+import { DreQueryDto } from '../dto/dre-query.dto';
+import { DreResponseDto } from '../dto/dre-response.dto';
 import { ExportRequestsQueryDto } from '../dto/export-requests-query.dto';
 
 @ApiTags('Métricas e exportação')
@@ -28,6 +31,7 @@ export class AnalyticsController {
   constructor(
     private readonly getDashboardUseCase: GetDashboardUseCase,
     private readonly exportRequestsUseCase: ExportRequestsUseCase,
+    private readonly getDreUseCase: GetDreUseCase,
   ) {}
 
   @Get('dashboard')
@@ -45,6 +49,23 @@ export class AnalyticsController {
     const metrics = await this.getDashboardUseCase.execute(companyId, query);
 
     return DashboardResponseDto.fromDomain(metrics);
+  }
+
+  @Get('dre')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
+  @ApiOperation({
+    summary: 'DRE gerencial (receita, custo e despesa realizados)',
+    description:
+      'Soma o que foi efetivamente pago (payables com status PAID), agrupado por conta contábil e por natureza (receita, custo, despesa), no período. Como este é um sistema de compras, a receita normalmente é zero — o valor útil aqui é custo + despesa e a quebra por conta.',
+  })
+  @ApiResponse({ status: 200, type: DreResponseDto })
+  async dre(
+    @CurrentCompany() companyId: string,
+    @Query() query: DreQueryDto,
+  ): Promise<DreResponseDto> {
+    const report = await this.getDreUseCase.execute(companyId, query);
+
+    return DreResponseDto.fromDomain(report);
   }
 
   @Get('exports/requests')

@@ -15,10 +15,7 @@ export class SendPurchaseOrderUseCase {
     private readonly auditLogRepository: IAuditLogRepository,
   ) {}
 
-  async execute(
-    id: string,
-    actor: RequestActor,
-  ): Promise<PurchaseOrderEntity> {
+  async execute(id: string, actor: RequestActor): Promise<PurchaseOrderEntity> {
     const order = await this.findPurchaseOrderByIdUseCase.execute(
       id,
       actor.companyId,

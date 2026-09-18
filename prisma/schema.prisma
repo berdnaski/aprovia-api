@@ -103,23 +103,27 @@ model Company {
   updated_at  DateTime  @updatedAt
   disabled_at DateTime?
 
-  members           CompanyMember[]
-  invites           Invite[]
-  cost_centers      CostCenter[]
-  approval_rules    ApprovalRule[]
-  suppliers         Supplier[]
-  categories        Category[]
-  purchase_requests PurchaseRequest[]
-  files             File[]
-  audit_logs        AuditLog[]
-  notifications     Notification[]
-  subscriptions     Subscription[]
-  purchase_orders   PurchaseOrder[]
-  receipts          Receipt[]
-  invoices          Invoice[]
-  match_results     MatchResult[]
-  payables          Payable[]
-  feedbacks         Feedback[]
+  members             CompanyMember[]
+  invites             Invite[]
+  cost_centers        CostCenter[]
+  approval_rules      ApprovalRule[]
+  suppliers           Supplier[]
+  categories          Category[]
+  purchase_requests   PurchaseRequest[]
+  files               File[]
+  audit_logs          AuditLog[]
+  notifications       Notification[]
+  subscriptions       Subscription[]
+  purchase_orders     PurchaseOrder[]
+  receipts            Receipt[]
+  invoices            Invoice[]
+  match_results       MatchResult[]
+  payables            Payable[]
+  feedbacks           Feedback[]
+  chart_accounts      ChartAccount[]
+  bank_accounts       SupplierBankAccount[]
+  recurring_contracts RecurringContract[]
+  service_invoices    ServiceInvoice[]
 
   @@map("companies")
 }
@@ -128,6 +132,7 @@ enum CompanyMemberRole {
   REQUESTER
   APPROVER
   FINANCE_ADMIN
+  ACCOUNTANT
 }
 
 model CompanyMember {
@@ -167,13 +172,18 @@ model CompanyMember {
   decisions_on_behalf  Decision[]         @relation("DecisionOnBehalfOf")
   invites_created      Invite[]           @relation("InviteManager")
 
-  issued_purchase_orders   PurchaseOrder[] @relation("PurchaseOrderIssuedBy")
-  canceled_purchase_orders PurchaseOrder[] @relation("PurchaseOrderCanceledBy")
-  receipts_registered      Receipt[]       @relation("ReceiptReceivedBy")
-  invoices_uploaded        Invoice[]       @relation("InvoiceUploadedBy")
-  invoices_rejected        Invoice[]       @relation("InvoiceRejectedBy")
-  match_results_resolved   MatchResult[]   @relation("MatchResolvedBy")
-  payables_released        Payable[]       @relation("PayableReleasedBy")
+  issued_purchase_orders      PurchaseOrder[]       @relation("PurchaseOrderIssuedBy")
+  canceled_purchase_orders    PurchaseOrder[]       @relation("PurchaseOrderCanceledBy")
+  receipts_registered         Receipt[]             @relation("ReceiptReceivedBy")
+  invoices_uploaded           Invoice[]             @relation("InvoiceUploadedBy")
+  invoices_rejected           Invoice[]             @relation("InvoiceRejectedBy")
+  match_results_resolved      MatchResult[]         @relation("MatchResolvedBy")
+  payables_released           Payable[]             @relation("PayableReleasedBy")
+  bank_accounts_requested     SupplierBankAccount[] @relation("BankAccountRequestedBy")
+  bank_accounts_reviewed      SupplierBankAccount[] @relation("BankAccountReviewedBy")
+  recurring_contracts_created RecurringContract[]
+  service_invoices_uploaded   ServiceInvoice[]      @relation("ServiceInvoiceUploadedBy")
+  service_invoices_rejected   ServiceInvoice[]      @relation("ServiceInvoiceRejectedBy")
 
   @@unique([user_id, company_id])
   @@index([company_id, role])
@@ -230,12 +240,15 @@ model CostCenter {
   parent   CostCenter?   @relation("CostCenterHierarchy", fields: [parent_id], references: [id])
   children CostCenter[]  @relation("CostCenterHierarchy")
 
-  members           CostCenterMember[]
-  budgets           Budget[]
-  approval_rules    ApprovalRule[]
-  purchase_requests PurchaseRequest[]
-  default_of        CompanyMember[]    @relation("MemberDefaultCostCenter")
-  invites           Invite[]
+  members             CostCenterMember[]
+  budgets             Budget[]
+  approval_rules      ApprovalRule[]
+  purchase_requests   PurchaseRequest[]
+  default_of          CompanyMember[]     @relation("MemberDefaultCostCenter")
+  invites             Invite[]
+  request_allocations RequestAllocation[]
+  payable_allocations PayableAllocation[]
+  recurring_contracts RecurringContract[]
 
   @@unique([company_id, name])
   @@unique([company_id, code])
@@ -277,7 +290,8 @@ model Budget {
   cost_center CostCenter @relation(fields: [cost_center_id], references: [id], onDelete: Cascade)
   updated_by  User?      @relation(fields: [updated_by_id], references: [id])
 
-  entries BudgetEntry[]
+  entries   BudgetEntry[]
+  documents File[]
 
   @@unique([cost_center_id, period_start])
   @@index([cost_center_id, period_start, period_end])
@@ -357,6 +371,21 @@ enum ValidationStatus {
   FAILED
 }
 
+enum TaxRegime {
+  MEI
+  SIMPLES_NACIONAL
+  LUCRO_PRESUMIDO
+  LUCRO_REAL
+  LUCRO_ARBITRADO
+  IMMUNE_OR_EXEMPT
+  UNKNOWN
+}
+
+enum TaxRegimeSource {
+  RECEITA
+  MANUAL
+}
+
 model Supplier {
   id         String @id @default(uuid())
   company_id String
@@ -375,17 +404,34 @@ model Supplier {
   email    String?
   phone    String?
 
+  opened_on                 DateTime?        @db.Date
+  legal_nature              String?
+  company_size              String?
+  share_capital_cents       BigInt?
+  main_activity_code        String?          @db.Char(7)
+  main_activity_description String?
+  simples_opted             Boolean?
+  mei_opted                 Boolean?
+  tax_regime                TaxRegime        @default(UNKNOWN)
+  tax_regime_source         TaxRegimeSource?
+  state_registration        String?
+  municipal_registration    String?
+  partners                  Json?
+
   validated_at DateTime?
   blocked      Boolean   @default(false)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  company           Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  purchase_requests PurchaseRequest[]
-  purchase_orders   PurchaseOrder[]
-  invoices          Invoice[]
-  payables          Payable[]
+  company             Company               @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_requests   PurchaseRequest[]
+  purchase_orders     PurchaseOrder[]
+  invoices            Invoice[]
+  payables            Payable[]
+  bank_accounts       SupplierBankAccount[]
+  recurring_contracts RecurringContract[]
+  service_invoices    ServiceInvoice[]
 
   @@unique([company_id, cnpj])
   @@index([company_id, registration_status])
@@ -403,13 +449,54 @@ model Category {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  company           Company           @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  purchase_requests PurchaseRequest[]
-  approval_rules    ApprovalRule[]
+  default_account_id String?
+
+  company             Company             @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  default_account     ChartAccount?       @relation(fields: [default_account_id], references: [id])
+  purchase_requests   PurchaseRequest[]
+  approval_rules      ApprovalRule[]
+  recurring_contracts RecurringContract[]
 
   @@unique([company_id, name])
   @@index([company_id, active])
   @@map("categories")
+}
+
+enum ChartAccountKind {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  COST
+  EXPENSE
+}
+
+model ChartAccount {
+  id            String           @id @default(uuid())
+  company_id    String
+  parent_id     String?
+  code          String
+  name          String
+  kind          ChartAccountKind
+  postable      Boolean          @default(true)
+  external_code String?
+  active        Boolean          @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company             Company             @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  parent              ChartAccount?       @relation("ChartAccountHierarchy", fields: [parent_id], references: [id])
+  children            ChartAccount[]      @relation("ChartAccountHierarchy")
+  categories          Category[]
+  request_allocations RequestAllocation[]
+  payable_allocations PayableAllocation[]
+  recurring_contracts RecurringContract[]
+
+  @@unique([company_id, code])
+  @@index([company_id, active])
+  @@index([parent_id])
+  @@map("chart_accounts")
 }
 
 enum Urgency {
@@ -469,6 +556,8 @@ model PurchaseRequest {
   budget_entries     BudgetEntry[]
   extraction_results ExtractionResult[]
   purchase_order     PurchaseOrder?
+  allocations        RequestAllocation[]
+  recurring_contract RecurringContract?
 
   @@unique([company_id, number])
   @@index([company_id, status])
@@ -483,6 +572,25 @@ enum ExtractionStatus {
   QUEUED
   SUCCEEDED
   FAILED
+}
+
+model RequestAllocation {
+  id                  String  @id @default(uuid())
+  purchase_request_id String
+  cost_center_id      String
+  chart_account_id    String?
+  share_bps           Int
+
+  created_at DateTime @default(now())
+
+  purchase_request PurchaseRequest @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+  cost_center      CostCenter      @relation(fields: [cost_center_id], references: [id])
+  chart_account    ChartAccount?   @relation(fields: [chart_account_id], references: [id])
+
+  @@index([purchase_request_id])
+  @@index([cost_center_id])
+  @@index([chart_account_id])
+  @@map("request_allocations")
 }
 
 model ExtractionResult {
@@ -532,6 +640,7 @@ enum FileType {
   INVOICE_XML
   INVOICE_PDF
   RECEIPT_ATTACHMENT
+  BUDGET_DOCUMENT
 }
 
 model File {
@@ -541,21 +650,26 @@ model File {
 
   purchase_request_id String?
   user_id             String?
+  budget_id           String?
 
   file_name   String
   mime_type   String
   size_bytes  BigInt
   storage_key String
+  sha256      String? @db.Char(64)
+  description String?
 
   uploaded_by_id String
   uploaded_at    DateTime @default(now())
 
   company          Company          @relation(fields: [company_id], references: [id], onDelete: Cascade)
   purchase_request PurchaseRequest? @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+  budget           Budget?          @relation(fields: [budget_id], references: [id], onDelete: Restrict)
   user             User?            @relation("FileOwner", fields: [user_id], references: [id])
   uploaded_by      User             @relation("FileUploadedBy", fields: [uploaded_by_id], references: [id])
 
   @@index([purchase_request_id])
+  @@index([budget_id])
   @@index([company_id, type])
   @@map("files")
 }
@@ -659,6 +773,21 @@ enum AuditEventType {
   MATCH_OVERRIDDEN
   PAYABLE_RELEASED
   PAYABLE_PAID
+  ACCOUNTS_CHANGED
+  ALLOCATIONS_CHANGED
+  SUPPLIER_CHANGED
+  BANK_ACCOUNT_REQUESTED
+  BANK_ACCOUNT_APPROVED
+  BANK_ACCOUNT_REJECTED
+  BANK_ACCOUNT_ARCHIVED
+  BUDGET_DOCUMENT_ADDED
+  RECURRING_CONTRACT_CREATED
+  RECURRING_CONTRACT_CANCELED
+  RECURRING_OCCURRENCE_GENERATED
+  RECURRING_OCCURRENCE_MATCHED
+  SERVICE_INVOICE_UPLOADED
+  SERVICE_INVOICE_REJECTED
+  SERVICE_INVOICE_APPROVED
 }
 
 model AuditLog {
@@ -853,10 +982,11 @@ model PurchaseOrder {
   issued_by        CompanyMember   @relation("PurchaseOrderIssuedBy", fields: [issued_by_id], references: [id])
   canceled_by      CompanyMember?  @relation("PurchaseOrderCanceledBy", fields: [canceled_by_id], references: [id])
 
-  items         PurchaseOrderItem[]
-  receipts      Receipt[]
-  invoices      Invoice[]
-  match_results MatchResult[]
+  items            PurchaseOrderItem[]
+  receipts         Receipt[]
+  invoices         Invoice[]
+  match_results    MatchResult[]
+  service_invoices ServiceInvoice[]
 
   @@unique([company_id, number])
   @@unique([purchase_request_id])
@@ -1029,10 +1159,11 @@ model Invoice {
   uploaded_by    CompanyMember  @relation("InvoiceUploadedBy", fields: [uploaded_by_id], references: [id])
   rejected_by    CompanyMember? @relation("InvoiceRejectedBy", fields: [rejected_by_id], references: [id])
 
-  items         InvoiceItem[]
-  taxes         InvoiceTax[]
-  match_results MatchResult[]
-  payables      Payable[]
+  items                InvoiceItem[]
+  taxes                InvoiceTax[]
+  match_results        MatchResult[]
+  payables             Payable[]
+  recurring_occurrence RecurringContractOccurrence?
 
   @@unique([company_id, access_key])
   @@index([company_id, status])
@@ -1190,6 +1321,8 @@ enum PayableReleaseReason {
   MATCHED
   NO_INVOICE_REQUIRED
   BELOW_MATCH_THRESHOLD
+  RECURRING_CONTRACT
+  SERVICE_INVOICE_MATCHED
 }
 
 model Payable {
@@ -1225,11 +1358,269 @@ model Payable {
   supplier    Supplier       @relation(fields: [supplier_id], references: [id])
   released_by CompanyMember? @relation("PayableReleasedBy", fields: [released_by_id], references: [id])
 
+  allocations          PayableAllocation[]
+  recurring_occurrence RecurringContractOccurrence?
+  service_invoice      ServiceInvoice?
+
   @@unique([invoice_id])
   @@index([company_id, status])
   @@index([company_id, due_date])
   @@index([supplier_id, due_date])
   @@map("payables")
+}
+
+model PayableAllocation {
+  id               String  @id @default(uuid())
+  payable_id       String
+  cost_center_id   String
+  chart_account_id String?
+  amount_cents     BigInt
+
+  created_at DateTime @default(now())
+
+  payable       Payable       @relation(fields: [payable_id], references: [id], onDelete: Cascade)
+  cost_center   CostCenter    @relation(fields: [cost_center_id], references: [id])
+  chart_account ChartAccount? @relation(fields: [chart_account_id], references: [id])
+
+  @@index([payable_id])
+  @@index([cost_center_id])
+  @@index([chart_account_id])
+  @@map("payable_allocations")
+}
+
+enum BankAccountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum BankAccountType {
+  CHECKING
+  SAVINGS
+  PAYMENT
+}
+
+enum PixKeyType {
+  CNPJ
+  CPF
+  EMAIL
+  PHONE
+  RANDOM
+}
+
+model SupplierBankAccount {
+  id          String @id @default(uuid())
+  company_id  String
+  supplier_id String
+
+  bank_code      String          @db.Char(3)
+  branch         String
+  account_number String
+  account_digit  String?
+  account_type   BankAccountType
+
+  holder_name     String
+  holder_document String @db.VarChar(14)
+
+  pix_key_type PixKeyType?
+  pix_key      String?
+
+  third_party   Boolean @default(false)
+  justification String? @db.Text
+
+  status BankAccountStatus @default(PENDING)
+
+  requested_by_id String
+  requested_at    DateTime @default(now())
+
+  reviewed_by_id String?
+  reviewed_at    DateTime?
+  review_note    String?   @db.Text
+
+  archived_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company      Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  supplier     Supplier       @relation(fields: [supplier_id], references: [id], onDelete: Cascade)
+  requested_by CompanyMember  @relation("BankAccountRequestedBy", fields: [requested_by_id], references: [id])
+  reviewed_by  CompanyMember? @relation("BankAccountReviewedBy", fields: [reviewed_by_id], references: [id])
+
+  @@index([company_id, status])
+  @@index([supplier_id, status])
+  @@map("supplier_bank_accounts")
+}
+
+enum RecurringFrequency {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum RecurringOccurrenceStatus {
+  PENDING
+  MATCHED
+  SKIPPED
+}
+
+model RecurringContract {
+  id                String  @id @default(uuid())
+  company_id        String
+  source_request_id String  @unique
+  supplier_id       String
+  cost_center_id    String
+  category_id       String?
+  chart_account_id  String?
+
+  title        String
+  amount_cents BigInt
+  frequency    RecurringFrequency
+
+  start_date           DateTime @db.Date
+  next_occurrence_date DateTime @db.Date
+
+  active        Boolean   @default(true)
+  canceled_at   DateTime?
+  cancel_reason String?   @db.Text
+
+  created_by_id String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  company        Company         @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  source_request PurchaseRequest @relation(fields: [source_request_id], references: [id])
+  supplier       Supplier        @relation(fields: [supplier_id], references: [id])
+  cost_center    CostCenter      @relation(fields: [cost_center_id], references: [id])
+  category       Category?       @relation(fields: [category_id], references: [id])
+  chart_account  ChartAccount?   @relation(fields: [chart_account_id], references: [id])
+  created_by     CompanyMember   @relation(fields: [created_by_id], references: [id])
+
+  occurrences RecurringContractOccurrence[]
+
+  @@index([company_id, active])
+  @@index([next_occurrence_date])
+  @@map("recurring_contracts")
+}
+
+model RecurringContractOccurrence {
+  id          String @id @default(uuid())
+  contract_id String
+
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
+  due_date     DateTime @db.Date
+
+  expected_amount_cents BigInt
+  status                RecurringOccurrenceStatus @default(PENDING)
+
+  budget_entry_id String?
+  invoice_id      String? @unique
+  payable_id      String? @unique
+  override_note   String? @db.Text
+
+  created_at DateTime  @default(now())
+  matched_at DateTime?
+
+  contract RecurringContract @relation(fields: [contract_id], references: [id], onDelete: Cascade)
+  invoice  Invoice?          @relation(fields: [invoice_id], references: [id])
+  payable  Payable?          @relation(fields: [payable_id], references: [id])
+
+  @@unique([contract_id, period_start])
+  @@index([contract_id, status])
+  @@map("recurring_contract_occurrences")
+}
+
+enum WithholdingKind {
+  IRRF
+  INSS
+  PIS
+  COFINS
+  CSLL
+  ISS_RETIDO
+}
+
+enum ServiceInvoiceStatus {
+  RECEIVED
+  APPROVED
+  REJECTED
+}
+
+model ServiceInvoice {
+  id                String  @id @default(uuid())
+  company_id        String
+  purchase_order_id String?
+  supplier_id       String?
+  payable_id        String? @unique
+
+  access_key        String   @db.VarChar(50)
+  number            String
+  verification_code String?
+  municipality_code String?
+  issued_at         DateTime
+
+  issuer_cnpj    String
+  issuer_name    String
+  recipient_cnpj String
+
+  service_description String  @db.Text
+  service_code        String?
+
+  gross_amount_cents BigInt
+  discount_cents     BigInt  @default(0)
+  iss_rate           String?
+  iss_amount_cents   BigInt  @default(0)
+  iss_withheld       Boolean @default(false)
+  net_amount_cents   BigInt
+
+  currency String @default("BRL")
+  raw_xml  String @db.Text
+
+  parse_status InvoiceParseStatus @default(PENDING)
+  parse_error  String?
+
+  status ServiceInvoiceStatus @default(RECEIVED)
+
+  integrity_warnings String[]
+
+  uploaded_by_id String
+  uploaded_at    DateTime @default(now())
+
+  rejected_by_id String?
+  rejected_at    DateTime?
+  reject_reason  String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  company        Company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  purchase_order PurchaseOrder? @relation(fields: [purchase_order_id], references: [id])
+  supplier       Supplier?      @relation(fields: [supplier_id], references: [id])
+  payable        Payable?       @relation(fields: [payable_id], references: [id])
+  uploaded_by    CompanyMember  @relation("ServiceInvoiceUploadedBy", fields: [uploaded_by_id], references: [id])
+  rejected_by    CompanyMember? @relation("ServiceInvoiceRejectedBy", fields: [rejected_by_id], references: [id])
+
+  withholdings ServiceInvoiceWithholding[]
+
+  @@unique([company_id, access_key])
+  @@index([company_id, status])
+  @@index([supplier_id])
+  @@map("service_invoices")
+}
+
+model ServiceInvoiceWithholding {
+  id                 String @id @default(uuid())
+  service_invoice_id String
+
+  kind         WithholdingKind
+  base_cents   BigInt
+  rate         String
+  amount_cents BigInt
+
+  service_invoice ServiceInvoice @relation(fields: [service_invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("service_invoice_withholdings")
 }
 
 enum FeedbackKind {

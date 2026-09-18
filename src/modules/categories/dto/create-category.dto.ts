@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateCategoryDto {
   @ApiProperty({ example: 'Software', maxLength: 120 })
@@ -16,4 +22,14 @@ export class CreateCategoryDto {
   @IsString()
   @MaxLength(300)
   description?: string | null;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Conta contábil sugerida no rateio dos pedidos desta categoria.',
+  })
+  @IsOptional()
+  @IsUUID()
+  defaultAccountId?: string | null;
 }

@@ -11,7 +11,12 @@ const item = (
   ordered: string,
   received: string,
   description = 'Notebook',
-) => ({ id, description, orderedQuantity: ordered, receivedQuantity: received });
+) => ({
+  id,
+  description,
+  orderedQuantity: ordered,
+  receivedQuantity: received,
+});
 
 const line = (id: string, quantity: string, rejected = '0.000') => ({
   purchaseOrderItemId: id,

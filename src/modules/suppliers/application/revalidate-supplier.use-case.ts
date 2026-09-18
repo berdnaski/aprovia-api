@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { RegistrationStatus, ValidationStatus } from 'generated/prisma/enums';
+import {
+  RegistrationStatus,
+  TaxRegimeSource,
+  ValidationStatus,
+} from 'generated/prisma/enums';
 import { ICnpjLookupProvider } from '../domain/cnpj-lookup.provider';
 import { SupplierEntity } from '../domain/supplier.entity';
 import { ISupplierRepository } from '../domain/suppliers.repository.interface';
@@ -45,6 +49,20 @@ export class RevalidateSupplierUseCase {
       zipCode: outcome.data.address.zipCode,
       email: outcome.data.email,
       phone: outcome.data.phone,
+      openedOn: outcome.data.fiscal.openedOn,
+      legalNature: outcome.data.fiscal.legalNature,
+      companySize: outcome.data.fiscal.companySize,
+      shareCapitalCents: outcome.data.fiscal.shareCapitalCents,
+      mainActivityCode: outcome.data.fiscal.mainActivityCode,
+      mainActivityDescription: outcome.data.fiscal.mainActivityDescription,
+      simplesOpted: outcome.data.fiscal.simplesOpted,
+      meiOpted: outcome.data.fiscal.meiOpted,
+      taxRegime:
+        supplier.taxRegimeSource === TaxRegimeSource.MANUAL
+          ? supplier.taxRegime
+          : outcome.data.fiscal.taxRegime,
+      stateRegistration: outcome.data.stateRegistration,
+      partners: outcome.data.fiscal.partners,
     });
   }
 }

@@ -43,9 +43,13 @@ export class UpdateMemberRoleUseCase {
       member.role === CompanyMemberRole.FINANCE_ADMIN &&
       role !== CompanyMemberRole.FINANCE_ADMIN;
 
+    const APPROVAL_CAPABLE: CompanyMemberRole[] = [
+      CompanyMemberRole.APPROVER,
+      CompanyMemberRole.FINANCE_ADMIN,
+    ];
     const losesApprovalPower =
-      member.role !== CompanyMemberRole.REQUESTER &&
-      role === CompanyMemberRole.REQUESTER;
+      APPROVAL_CAPABLE.includes(member.role) &&
+      !APPROVAL_CAPABLE.includes(role);
 
     return this.transactionManager.run(async (context) => {
       if (losesAdmin) {

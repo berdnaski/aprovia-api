@@ -182,7 +182,11 @@ export class WritePlanDto {
   @Transform(({ value }: { value: string }) => BigInt(value))
   priceCents: bigint;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, description: 'Nulo é ilimitado.' })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Nulo é ilimitado.',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -217,7 +221,10 @@ export class UpdatePlanDto extends PartialType(
 ) {}
 
 export class PlanUsageResponseDto extends PlanResponseDto {
-  @ApiProperty({ example: 4, description: 'Organizações assinando este plano.' })
+  @ApiProperty({
+    example: 4,
+    description: 'Organizações assinando este plano.',
+  })
   subscriptions: number;
 
   @ApiProperty()
@@ -231,4 +238,3 @@ export class FeatureCatalogResponseDto {
   @ApiProperty({ example: 'Extração assistida por IA' })
   label: string;
 }
-

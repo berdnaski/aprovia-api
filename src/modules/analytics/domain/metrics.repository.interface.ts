@@ -4,6 +4,7 @@ import {
   ApproverPerformance,
   CostCenterConsumption,
   CostCenterCycleTime,
+  DreAccountLine,
   MonthlyCostCenterSummary,
   RepeatedRequest,
   StatusTotal,
@@ -41,4 +42,6 @@ export abstract class IMetricsRepository {
     periodStart: Date,
     periodEnd: Date,
   ): Promise<MonthlyCostCenterSummary[]>;
+
+  abstract dreLines(window: MetricsWindow): Promise<DreAccountLine[]>;
 }

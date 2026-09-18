@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ApprovalRulesModule } from 'src/modules/approval-rules/infrastructure/approval-rules.module';
 import { BudgetsModule } from 'src/modules/budgets/infrastructure/budgets.module';
 import { CategoriesModule } from 'src/modules/categories/infrastructure/categories.module';
+import { ChartAccountsModule } from 'src/modules/chart-accounts/infrastructure/chart-accounts.module';
 import { AuthModule } from 'src/modules/auth/infrastructure/auth.module';
 import { BillingModule } from 'src/modules/billing/infrastructure/billing.module';
 import { CompaniesModule } from 'src/modules/companies/infrastructure/companies.module';
@@ -15,6 +16,7 @@ import { DuplicateRequestUseCase } from '../application/duplicate-request.use-ca
 import { FindRequestByIdUseCase } from '../application/find-request-by-id.use-case';
 import { ListRequestsUseCase } from '../application/list-requests.use-case';
 import { ManageRequestFilesUseCase } from '../application/manage-request-files.use-case';
+import { ManageRequestAllocationsUseCase } from '../application/manage-request-allocations.use-case';
 import { ManageRequestItemsUseCase } from '../application/manage-request-items.use-case';
 import { GetExtractionResultUseCase } from '../application/get-extraction-result.use-case';
 import { GetRequestBudgetUseCase } from '../application/get-request-budget.use-case';
@@ -36,6 +38,7 @@ import { IExtractionService } from '../domain/extraction.service';
 import { IApprovalStepReader } from '../domain/request-timeline';
 import { IPurchaseRequestRepository } from '../domain/purchase-requests.repository.interface';
 import { IRequestFileRepository } from '../domain/request-files.repository.interface';
+import { IRequestAllocationRepository } from '../domain/request-allocations.repository.interface';
 import { IRequestItemRepository } from '../domain/request-items.repository.interface';
 import { ApprovalStepReader } from './approval-steps.reader';
 import { ApprovalStepWriter } from './approval-steps.writer';
@@ -46,16 +49,19 @@ import { LlmExtractionService } from './llm-extraction.service';
 import { EmailApprovalsController } from './email-approvals.controller';
 import { PurchaseRequestsController } from './purchase-requests.controller';
 import { RequestFilesController } from './request-files.controller';
+import { RequestAllocationsController } from './request-allocations.controller';
 import { RequestItemsController } from './request-items.controller';
 import { PurchaseRequestRepository } from './purchase-requests.repository';
 import { SlaStepRepository } from './sla-steps.repository';
 import { RequestFileRepository } from './request-files.repository';
+import { RequestAllocationRepository } from './request-allocations.repository';
 import { RequestItemRepository } from './request-items.repository';
 
 @Module({
   imports: [
     CostCentersModule,
     CategoriesModule,
+    ChartAccountsModule,
     SuppliersModule,
     ApprovalRulesModule,
     CompaniesModule,
@@ -68,6 +74,7 @@ import { RequestItemRepository } from './request-items.repository';
   controllers: [
     PurchaseRequestsController,
     RequestItemsController,
+    RequestAllocationsController,
     RequestFilesController,
     EmailApprovalsController,
   ],
@@ -77,6 +84,10 @@ import { RequestItemRepository } from './request-items.repository';
       useClass: PurchaseRequestRepository,
     },
     { provide: IRequestItemRepository, useClass: RequestItemRepository },
+    {
+      provide: IRequestAllocationRepository,
+      useClass: RequestAllocationRepository,
+    },
     { provide: IRequestFileRepository, useClass: RequestFileRepository },
     { provide: IExtractionService, useClass: LlmExtractionService },
     {
@@ -94,6 +105,7 @@ import { RequestItemRepository } from './request-items.repository';
     FindRequestByIdUseCase,
     ListRequestsUseCase,
     ManageRequestItemsUseCase,
+    ManageRequestAllocationsUseCase,
     ManageRequestFilesUseCase,
     RequestExtractionUseCase,
     GetExtractionResultUseCase,
@@ -114,6 +126,7 @@ import { RequestItemRepository } from './request-items.repository';
     ISlaStepRepository,
     FindRequestByIdUseCase,
     NotifyPendingApprovalUseCase,
+    ManageRequestAllocationsUseCase,
   ],
 })
 export class PurchaseRequestsModule {}

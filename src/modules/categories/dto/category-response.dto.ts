@@ -14,6 +14,9 @@ export class CategoryResponseDto {
   @ApiProperty()
   active: boolean;
 
+  @ApiProperty({ format: 'uuid', nullable: true, type: String })
+  defaultAccountId: string | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -23,6 +26,7 @@ export class CategoryResponseDto {
     dto.name = entity.name;
     dto.description = entity.description;
     dto.active = entity.active;
+    dto.defaultAccountId = entity.defaultAccountId;
     dto.createdAt = entity.createdAt;
     return dto;
   }

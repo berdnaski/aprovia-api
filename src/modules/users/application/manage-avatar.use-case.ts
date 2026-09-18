@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { NotFoundError, ValidationError } from 'src/shared/domain/errors/domain.error';
-import { AllowedMimeType, detectMimeType } from 'src/shared/domain/file-signature';
+import {
+  NotFoundError,
+  ValidationError,
+} from 'src/shared/domain/errors/domain.error';
+import {
+  AllowedMimeType,
+  detectMimeType,
+} from 'src/shared/domain/file-signature';
 import { IStorageService } from 'src/shared/domain/storage.service';
 import { StorageCleanupService } from 'src/shared/infrastructure/storage/storage-cleanup.service';
 import { UserEntity } from '../domain/user.entity';
@@ -25,7 +31,10 @@ export class ManageAvatarUseCase {
     private readonly storageCleanupService: StorageCleanupService,
   ) {}
 
-  async upload(userId: string, file: AvatarFile | undefined): Promise<UserEntity> {
+  async upload(
+    userId: string,
+    file: AvatarFile | undefined,
+  ): Promise<UserEntity> {
     if (!file) {
       throw new ValidationError('Escolha uma imagem para usar como foto.');
     }

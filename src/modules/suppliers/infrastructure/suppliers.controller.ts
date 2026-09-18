@@ -57,6 +57,7 @@ export class SuppliersController {
     CompanyMemberRole.REQUESTER,
     CompanyMemberRole.APPROVER,
     CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
   )
   @ApiOperation({
     summary: 'Consultar CNPJ para auto-completar o cadastro',
@@ -78,6 +79,7 @@ export class SuppliersController {
     CompanyMemberRole.REQUESTER,
     CompanyMemberRole.APPROVER,
     CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
   )
   @ApiOperation({
     summary: 'Cadastrar fornecedor',
@@ -99,6 +101,7 @@ export class SuppliersController {
     CompanyMemberRole.REQUESTER,
     CompanyMemberRole.APPROVER,
     CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
   )
   @ApiOperation({ summary: 'Listar fornecedores da base' })
   @ApiResponse({ status: 200, type: PaginatedResponseDto })
@@ -115,6 +118,7 @@ export class SuppliersController {
     CompanyMemberRole.REQUESTER,
     CompanyMemberRole.APPROVER,
     CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
   )
   @ApiOperation({ summary: 'Buscar fornecedor por ID' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })

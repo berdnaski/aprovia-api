@@ -18,8 +18,7 @@ export class CompanyMapper {
     entity.escalationHours = raw.escalation_hours;
     entity.dualApprovalThresholdCents = raw.dual_approval_threshold_cents;
     entity.priceTolerancePercent = raw.price_tolerance_percent.toNumber();
-    entity.quantityTolerancePercent =
-      raw.quantity_tolerance_percent.toNumber();
+    entity.quantityTolerancePercent = raw.quantity_tolerance_percent.toNumber();
     entity.requiresReceiptBeforeInvoice = raw.requires_receipt_before_invoice;
     entity.autoReleaseOnMatch = raw.auto_release_on_match;
     entity.matchRequiredAboveCents = raw.match_required_above_cents;

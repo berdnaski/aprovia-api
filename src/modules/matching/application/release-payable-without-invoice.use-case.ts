@@ -16,7 +16,10 @@ import {
   ProofRequiredError,
   UnsupportedProofFileTypeError,
 } from '../domain/matching.errors';
+import { IPayableAllocationRepository } from '../domain/payable-allocations.repository.interface';
 import { IPayableRepository } from '../domain/payables.repository.interface';
+import { allocate } from 'src/modules/purchase-requests/domain/services/allocation-split';
+import { assertValidPayableAllocation } from '../domain/services/payable-allocation-rules';
 import { ReleasePayableWithoutInvoiceDto } from '../dto/release-payable-without-invoice.dto';
 
 interface UploadedFileLike {
@@ -32,6 +35,7 @@ export class ReleasePayableWithoutInvoiceUseCase {
     private readonly storageService: IStorageService,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
+    private readonly payableAllocationRepository: IPayableAllocationRepository,
   ) {}
 
   async execute(
@@ -92,6 +96,27 @@ export class ReleasePayableWithoutInvoiceUseCase {
       proofStorageKey: storageKey,
       releaseNote: data.note,
     });
+
+    if (data.allocations?.length) {
+      const shares = data.allocations.map((line) => ({
+        costCenterId: line.costCenterId,
+        chartAccountId: line.chartAccountId ?? null,
+        shareBps: line.shareBps,
+      }));
+
+      assertValidPayableAllocation(shares);
+
+      const lines = allocate(released.amountCents, shares);
+
+      await this.payableAllocationRepository.replace(
+        released.id,
+        lines.map((line) => ({
+          costCenterId: line.costCenterId,
+          chartAccountId: line.chartAccountId,
+          amountCents: line.amountCents,
+        })),
+      );
+    }
 
     await this.auditLogRepository.record({
       companyId: actor.companyId,

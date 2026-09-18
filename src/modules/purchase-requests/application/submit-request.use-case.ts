@@ -10,14 +10,15 @@ import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.reposit
 import { addBusinessHours } from 'src/shared/domain/business-calendar';
 import { NotifyPendingApprovalUseCase } from './notify-pending-approval.use-case';
 import { SimulateRouteUseCase } from 'src/modules/approval-rules/application/simulate-route.use-case';
-import { AssessBudgetAvailabilityUseCase } from 'src/modules/budgets/application/assess-budget-availability.use-case';
-import { BudgetVerdict } from 'src/modules/budgets/domain/services/budget-balance.service';
 import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { AssertSupplierUsableUseCase } from 'src/modules/suppliers/application/assert-supplier-usable.use-case';
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import { PurchaseRequestEntity } from '../domain/purchase-request.entity';
-import { EmptyRequestError } from '../domain/purchase-requests.errors';
+import {
+  CostCenterWithoutBudgetError,
+  EmptyRequestError,
+} from '../domain/purchase-requests.errors';
 import { IPurchaseRequestRepository } from '../domain/purchase-requests.repository.interface';
 import { IRequestItemRepository } from '../domain/request-items.repository.interface';
 import { IApprovalStepWriter } from '../domain/approval-steps.writer';
@@ -26,6 +27,10 @@ import {
   FindRequestByIdUseCase,
   RequestActor,
 } from './find-request-by-id.use-case';
+import {
+  GetRequestBudgetUseCase,
+  RequestBudgetVerdict,
+} from './get-request-budget.use-case';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 const DUPLICATE_TOLERANCE_PERCENT = 5n;
@@ -40,7 +45,7 @@ export class SubmitRequestUseCase {
     private readonly assertSupplierUsableUseCase: AssertSupplierUsableUseCase,
     private readonly simulateRouteUseCase: SimulateRouteUseCase,
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
-    private readonly assessBudgetAvailabilityUseCase: AssessBudgetAvailabilityUseCase,
+    private readonly getRequestBudgetUseCase: GetRequestBudgetUseCase,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly notifyPendingApprovalUseCase: NotifyPendingApprovalUseCase,
     private readonly transactionManager: ITransactionManager,
@@ -114,15 +119,22 @@ export class SubmitRequestUseCase {
       at: submittedAt,
     });
 
-    const assessment = await this.assessBudgetAvailabilityUseCase.execute(
-      request.costCenterId,
+    const budget = await this.getRequestBudgetUseCase.forRequest(
+      request,
       actor.companyId,
-      total,
       submittedAt,
     );
 
+    const unbudgeted = budget.lines.find(
+      (line) => line.verdict === RequestBudgetVerdict.NO_BUDGET,
+    );
+
+    if (unbudgeted) {
+      throw new CostCenterWithoutBudgetError(unbudgeted.costCenterName);
+    }
+
     const requiresOverride =
-      assessment.verdict === BudgetVerdict.REQUIRES_OVERRIDE;
+      budget.verdict === RequestBudgetVerdict.REQUIRES_OVERRIDE;
 
     const reminderDueAt = addBusinessHours(submittedAt, company.reminderHours);
     const escalationDueAt = addBusinessHours(

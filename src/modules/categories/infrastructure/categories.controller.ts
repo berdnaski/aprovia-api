@@ -46,6 +46,7 @@ export class CategoriesController {
     CompanyMemberRole.REQUESTER,
     CompanyMemberRole.APPROVER,
     CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
   )
   @ApiOperation({
     summary: 'Listar categorias de compra',

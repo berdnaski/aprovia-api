@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { TaxRegimeSource } from 'generated/prisma/enums';
 import { SupplierEntity } from '../domain/supplier.entity';
 import { ISupplierRepository } from '../domain/suppliers.repository.interface';
 import { UpdateSupplierDto } from '../dto/update-supplier.dto';
@@ -27,6 +28,11 @@ export class UpdateSupplierUseCase {
       zipCode: data.zipCode,
       email: data.email,
       phone: data.phone,
+      municipalRegistration: data.municipalRegistration,
+      ...(data.taxRegime && {
+        taxRegime: data.taxRegime,
+        taxRegimeSource: TaxRegimeSource.MANUAL,
+      }),
     });
   }
 }

@@ -8,6 +8,19 @@ import {
   CnpjLookupOutcome,
   ICnpjLookupProvider,
 } from '../domain/cnpj-lookup.provider';
+import { SupplierPartner } from '../domain/supplier.entity';
+import { resolveTaxRegime } from '../domain/services/tax-regime.service';
+
+interface BrasilApiRegimeTributario {
+  ano: number;
+  forma_de_tributacao?: string | null;
+}
+
+interface BrasilApiSocio {
+  nome_socio?: string;
+  qualificacao_socio?: string;
+  data_entrada_sociedade?: string;
+}
 
 interface BrasilApiCnpjResponse {
   cnpj?: string;
@@ -22,6 +35,17 @@ interface BrasilApiCnpjResponse {
   cep?: string;
   email?: string;
   ddd_telefone_1?: string;
+  data_inicio_atividade?: string;
+  natureza_juridica?: string;
+  porte?: string;
+  capital_social?: number;
+  cnae_fiscal?: number;
+  cnae_fiscal_descricao?: string;
+  opcao_pelo_simples?: boolean;
+  opcao_pelo_mei?: boolean;
+  regime_tributario?: BrasilApiRegimeTributario[];
+  qsa?: BrasilApiSocio[];
+  inscricoes_estaduais?: { inscricao_estadual?: string; ativo?: boolean }[];
 }
 
 const STATUS_BY_DESCRIPTION: Record<string, RegistrationStatus> = {
@@ -35,6 +59,25 @@ const STATUS_BY_DESCRIPTION: Record<string, RegistrationStatus> = {
 function blankToNull(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function parseDate(value: string | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parsePartners(qsa: BrasilApiSocio[] | undefined): SupplierPartner[] {
+  return (qsa ?? [])
+    .filter((partner) => partner.nome_socio)
+    .map((partner) => ({
+      name: partner.nome_socio as string,
+      role: blankToNull(partner.qualificacao_socio) ?? 'Sócio',
+      enteredAt: blankToNull(partner.data_entrada_sociedade),
+    }));
 }
 
 @Injectable()
@@ -128,6 +171,10 @@ export class BrasilApiCnpjProvider implements ICnpjLookupProvider {
       .filter(Boolean)
       .join(', ');
 
+    const activeState = payload.inscricoes_estaduais?.find(
+      (item) => item.ativo,
+    );
+
     return {
       ok: true,
       data: {
@@ -145,6 +192,28 @@ export class BrasilApiCnpjProvider implements ICnpjLookupProvider {
         },
         email: blankToNull(payload.email),
         phone: blankToNull(payload.ddd_telefone_1),
+        fiscal: {
+          openedOn: parseDate(payload.data_inicio_atividade),
+          legalNature: blankToNull(payload.natureza_juridica),
+          companySize: blankToNull(payload.porte),
+          shareCapitalCents:
+            typeof payload.capital_social === 'number'
+              ? BigInt(Math.round(payload.capital_social * 100))
+              : null,
+          mainActivityCode: payload.cnae_fiscal
+            ? String(payload.cnae_fiscal)
+            : null,
+          mainActivityDescription: blankToNull(payload.cnae_fiscal_descricao),
+          simplesOpted: payload.opcao_pelo_simples ?? null,
+          meiOpted: payload.opcao_pelo_mei ?? null,
+          taxRegime: resolveTaxRegime({
+            simplesOpted: payload.opcao_pelo_simples ?? null,
+            meiOpted: payload.opcao_pelo_mei ?? null,
+            regimeTributario: payload.regime_tributario ?? [],
+          }),
+          partners: parsePartners(payload.qsa),
+        },
+        stateRegistration: activeState?.inscricao_estadual ?? null,
       },
     };
   }

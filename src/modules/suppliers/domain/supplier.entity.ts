@@ -1,7 +1,15 @@
 import type {
   RegistrationStatus,
+  TaxRegime,
+  TaxRegimeSource,
   ValidationStatus,
 } from 'generated/prisma/enums';
+
+export interface SupplierPartner {
+  name: string;
+  role: string;
+  enteredAt: string | null;
+}
 
 export class SupplierEntity {
   id: string;
@@ -21,6 +29,20 @@ export class SupplierEntity {
 
   validatedAt: Date | null;
   blocked: boolean;
+
+  openedOn: Date | null;
+  legalNature: string | null;
+  companySize: string | null;
+  shareCapitalCents: bigint | null;
+  mainActivityCode: string | null;
+  mainActivityDescription: string | null;
+  simplesOpted: boolean | null;
+  meiOpted: boolean | null;
+  taxRegime: TaxRegime;
+  taxRegimeSource: TaxRegimeSource | null;
+  stateRegistration: string | null;
+  municipalRegistration: string | null;
+  partners: SupplierPartner[];
 
   createdAt: Date;
   updatedAt: Date;

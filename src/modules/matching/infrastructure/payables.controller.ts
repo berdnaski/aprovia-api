@@ -6,15 +6,18 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
   ApiCookieAuth,
   ApiOperation,
+  ApiProduces,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -23,10 +26,12 @@ import { RequestActor } from 'src/modules/purchase-requests/application/find-req
 import { CurrentActor } from 'src/modules/purchase-requests/infrastructure/request-actor';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { PaginatedResponseDto } from 'src/shared/dto/paginated-response.dto';
+import { ExportPayablesUseCase } from '../application/export-payables.use-case';
 import { ListPayablesUseCase } from '../application/list-payables.use-case';
 import { MarkPayableAsPaidUseCase } from '../application/mark-payable-as-paid.use-case';
 import { ReleasePayableUseCase } from '../application/release-payable.use-case';
 import { ReleasePayableWithoutInvoiceUseCase } from '../application/release-payable-without-invoice.use-case';
+import { ExportPayablesQueryDto } from '../dto/export-payables-query.dto';
 import { ListPayablesQueryDto } from '../dto/list-payables-query.dto';
 import { PayableResponseDto } from '../dto/payable-response.dto';
 import { ReleasePayableDto } from '../dto/release-payable.dto';
@@ -49,10 +54,40 @@ export class PayablesController {
     private readonly markPayableAsPaidUseCase: MarkPayableAsPaidUseCase,
     private readonly releasePayableUseCase: ReleasePayableUseCase,
     private readonly releasePayableWithoutInvoiceUseCase: ReleasePayableWithoutInvoiceUseCase,
+    private readonly exportPayablesUseCase: ExportPayablesUseCase,
   ) {}
 
+  @Get('export')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
+  @ApiProduces('text/csv')
+  @ApiOperation({
+    summary: 'Exportar contas pagas para lançamento no ERP',
+    description:
+      'CSV com uma linha por rateio (centro de custo × conta contábil), valor bruto, retenções (IRRF, INSS, PIS, COFINS, CSLL, ISS retido) e líquido pago. Layout genérico para importar em Omie, Conta Azul, Nibo ou qualquer outro ERP.',
+  })
+  @ApiResponse({ status: 200, description: 'Arquivo CSV' })
+  @ApiResponse({ status: 400, description: 'Filtro devolve linhas demais' })
+  async export(
+    @CurrentActor() actor: RequestActor,
+    @Query() query: ExportPayablesQueryDto,
+    @Res() response: Response,
+  ): Promise<void> {
+    const file = await this.exportPayablesUseCase.execute(
+      actor.companyId,
+      query,
+    );
+
+    response.setHeader('Content-Type', file.contentType);
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    response.setHeader('Content-Length', file.content.length);
+    response.end(file.content);
+  }
+
   @Get()
-  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
   @ApiOperation({ summary: 'Listar contas a pagar (RN61)' })
   @ApiResponse({ status: 200, type: PaginatedResponseDto })
   async list(

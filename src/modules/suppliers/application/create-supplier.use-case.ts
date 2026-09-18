@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { RegistrationStatus, ValidationStatus } from 'generated/prisma/enums';
+import {
+  RegistrationStatus,
+  TaxRegime,
+  TaxRegimeSource,
+  ValidationStatus,
+} from 'generated/prisma/enums';
 import { isValidCnpj, normalizeCnpj } from 'src/shared/domain/cnpj';
 import { isUniqueViolation } from 'src/shared/domain/prisma-error';
 import { ICnpjLookupProvider } from '../domain/cnpj-lookup.provider';
@@ -49,6 +54,18 @@ export class CreateSupplierUseCase {
           zipCode: outcome.data.address.zipCode,
           email: outcome.data.email,
           phone: outcome.data.phone,
+          openedOn: outcome.data.fiscal.openedOn,
+          legalNature: outcome.data.fiscal.legalNature,
+          companySize: outcome.data.fiscal.companySize,
+          shareCapitalCents: outcome.data.fiscal.shareCapitalCents,
+          mainActivityCode: outcome.data.fiscal.mainActivityCode,
+          mainActivityDescription: outcome.data.fiscal.mainActivityDescription,
+          simplesOpted: outcome.data.fiscal.simplesOpted,
+          meiOpted: outcome.data.fiscal.meiOpted,
+          taxRegime: outcome.data.fiscal.taxRegime,
+          taxRegimeSource: TaxRegimeSource.RECEITA,
+          stateRegistration: outcome.data.stateRegistration,
+          partners: outcome.data.fiscal.partners,
         }
       : {
           legalName: data.legalName,
@@ -62,6 +79,18 @@ export class CreateSupplierUseCase {
           zipCode: data.zipCode ?? null,
           email: data.email ?? null,
           phone: data.phone ?? null,
+          openedOn: null,
+          legalNature: null,
+          companySize: null,
+          shareCapitalCents: null,
+          mainActivityCode: null,
+          mainActivityDescription: null,
+          simplesOpted: null,
+          meiOpted: null,
+          taxRegime: TaxRegime.UNKNOWN,
+          taxRegimeSource: null,
+          stateRegistration: null,
+          partners: [],
         };
 
     try {

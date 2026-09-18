@@ -19,7 +19,8 @@ export class ReceiptItemDto {
 
   @ApiProperty({
     example: '6.000',
-    description: 'Quantidade aceita nesta entrega. Aceita até 3 casas decimais.',
+    description:
+      'Quantidade aceita nesta entrega. Aceita até 3 casas decimais.',
   })
   @IsNumberString()
   quantity: string;

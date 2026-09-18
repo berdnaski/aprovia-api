@@ -18,6 +18,8 @@ import { IMatchResultRepository } from '../domain/matching.repository.interface'
 import { InvoiceOrderMismatchError } from 'src/modules/invoices/domain/invoices.errors';
 import { runThreeWayMatch } from '../domain/services/three-way-match.service';
 import { IPayableRepository } from '../domain/payables.repository.interface';
+import { DerivePayableAllocationsUseCase } from './derive-payable-allocations.use-case';
+import { IPayableAllocationRepository } from '../domain/payable-allocations.repository.interface';
 import { FindInvoiceByIdUseCase } from 'src/modules/invoices/application/find-invoice-by-id.use-case';
 
 const DEFAULT_DUE_DAYS = 30;
@@ -34,6 +36,8 @@ export class RunMatchUseCase {
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
     private readonly invoiceRepository: IInvoiceRepository,
     private readonly auditLogRepository: IAuditLogRepository,
+    private readonly derivePayableAllocationsUseCase: DerivePayableAllocationsUseCase,
+    private readonly payableAllocationRepository: IPayableAllocationRepository,
   ) {}
 
   async execute(
@@ -128,7 +132,7 @@ export class RunMatchUseCase {
         actor.companyId,
       );
 
-      await this.payableRepository.create({
+      const payable = await this.payableRepository.create({
         companyId: actor.companyId,
         invoiceId: invoice.id,
         supplierId: order.supplierId,
@@ -140,6 +144,22 @@ export class RunMatchUseCase {
           releasedById: actor.memberId,
         }),
       });
+
+      const allocations = await this.derivePayableAllocationsUseCase.execute(
+        order.purchaseRequestId,
+        payable.amountCents,
+      );
+
+      if (allocations.length > 0) {
+        await this.payableAllocationRepository.replace(
+          payable.id,
+          allocations.map((line) => ({
+            costCenterId: line.costCenterId,
+            chartAccountId: line.chartAccountId,
+            amountCents: line.amountCents,
+          })),
+        );
+      }
     }
 
     await this.auditLogRepository.record({

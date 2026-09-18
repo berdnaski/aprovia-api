@@ -46,7 +46,6 @@ export class PlanRepository implements IPlanRepository {
     return records.map(PlanMapper.toDomain);
   }
 
-
   async listAll(): Promise<PlanEntity[]> {
     const records = await this.prisma.plan.findMany({
       orderBy: { price_cents: 'asc' },

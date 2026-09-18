@@ -11,8 +11,11 @@ import { ApprovalRulesModule } from './modules/approval-rules/infrastructure/app
 import { BudgetsModule } from './modules/budgets/infrastructure/budgets.module';
 import { SuppliersModule } from './modules/suppliers/infrastructure/suppliers.module';
 import { CategoriesModule } from './modules/categories/infrastructure/categories.module';
+import { ChartAccountsModule } from './modules/chart-accounts/infrastructure/chart-accounts.module';
+import { RecurringContractsModule } from './modules/recurring-contracts/infrastructure/recurring-contracts.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/infrastructure/purchase-orders.module';
 import { InvoicesModule } from './modules/invoices/infrastructure/invoices.module';
+import { ServiceInvoicesModule } from './modules/service-invoices/infrastructure/service-invoices.module';
 import { MatchingModule } from './modules/matching/infrastructure/matching.module';
 import { ReceiptsModule } from './modules/receipts/infrastructure/receipts.module';
 import { PurchaseRequestsModule } from './modules/purchase-requests/infrastructure/purchase-requests.module';
@@ -51,12 +54,15 @@ import { AnalyticsModule } from './modules/analytics/infrastructure/analytics.mo
     ApprovalRulesModule,
     BudgetsModule,
     SuppliersModule,
+    ChartAccountsModule,
     CategoriesModule,
     PurchaseRequestsModule,
     PurchaseOrdersModule,
     ReceiptsModule,
     InvoicesModule,
+    ServiceInvoicesModule,
     MatchingModule,
+    RecurringContractsModule,
     InvitesModule,
     PlatformModule,
     FeedbackModule,

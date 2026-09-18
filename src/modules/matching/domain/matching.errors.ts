@@ -85,3 +85,20 @@ export class UnsupportedProofFileTypeError extends ValidationError {
     );
   }
 }
+
+export class PayableAllocationSharesError extends ValidationError {
+  constructor(totalBps: number) {
+    super(
+      `O rateio precisa somar 100%, e hoje soma ${(totalBps / 100).toLocaleString('pt-BR')}%. Ajuste os percentuais.`,
+      { totalBps },
+    );
+  }
+}
+
+export class PayableAllocationLineDuplicatedError extends ValidationError {
+  constructor() {
+    super(
+      'O rateio repete o mesmo centro de custo com a mesma conta. Junte as linhas em uma só.',
+    );
+  }
+}

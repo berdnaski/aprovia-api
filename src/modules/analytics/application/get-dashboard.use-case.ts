@@ -44,17 +44,17 @@ export class GetDashboardUseCase {
       repeated,
       daily,
     ] = await Promise.all([
-        this.metricsRepository.statusTotals(window),
-        this.metricsRepository.costCenterConsumption(
-          companyId,
-          period.periodStart,
-        ),
-        this.metricsRepository.approverPerformance(window),
-        this.metricsRepository.costCenterCycleTime(window),
-        this.metricsRepository.bottlenecks(companyId),
-        this.metricsRepository.repeatedRequests(window),
-        this.metricsRepository.dailyVolume(window),
-      ]);
+      this.metricsRepository.statusTotals(window),
+      this.metricsRepository.costCenterConsumption(
+        companyId,
+        period.periodStart,
+      ),
+      this.metricsRepository.approverPerformance(window),
+      this.metricsRepository.costCenterCycleTime(window),
+      this.metricsRepository.bottlenecks(companyId),
+      this.metricsRepository.repeatedRequests(window),
+      this.metricsRepository.dailyVolume(window),
+    ]);
 
     return {
       from,

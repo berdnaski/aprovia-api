@@ -1,12 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsDateString,
   IsNumberString,
+  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { AllocationLineDto } from 'src/modules/purchase-requests/dto/replace-allocations.dto';
 
 export class ReleasePayableWithoutInvoiceDto {
   @ApiProperty({ format: 'uuid' })
@@ -31,4 +36,16 @@ export class ReleasePayableWithoutInvoiceDto {
   @MinLength(10)
   @MaxLength(500)
   note: string;
+
+  @ApiProperty({
+    type: [AllocationLineDto],
+    required: false,
+    description:
+      'Rateio por centro de custo. Sem rateio informado, a conta fica sem centro de custo definido.',
+  })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => AllocationLineDto)
+  @ArrayMaxSize(20)
+  allocations?: AllocationLineDto[];
 }

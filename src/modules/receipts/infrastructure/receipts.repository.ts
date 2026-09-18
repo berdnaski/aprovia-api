@@ -64,7 +64,6 @@ export class ReceiptRepository implements IReceiptRepository {
     return rows.map(ReceiptMapper.toDomain);
   }
 
-
   async list(filter: ListReceiptsFilter): Promise<Page<ReceiptEntity>> {
     const where: Prisma.ReceiptWhereInput = {
       company_id: filter.companyId,

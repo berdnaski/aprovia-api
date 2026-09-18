@@ -20,11 +20,13 @@ import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import { IApprovalStepWriter } from '../domain/approval-steps.writer';
 import { PurchaseRequestEntity } from '../domain/purchase-request.entity';
 import { IPurchaseRequestRepository } from '../domain/purchase-requests.repository.interface';
+import { sumByCostCenter } from '../domain/services/allocation-split';
 import { CancelRequestDto } from '../dto/cancel-request.dto';
 import {
   FindRequestByIdUseCase,
   RequestActor,
 } from './find-request-by-id.use-case';
+import { ManageRequestAllocationsUseCase } from './manage-request-allocations.use-case';
 
 const MIN_REASON = 10;
 
@@ -42,6 +44,7 @@ export class CancelRequestUseCase {
     private readonly budgetRepository: IBudgetRepository,
     private readonly budgetEntryRepository: IBudgetEntryRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
+    private readonly manageRequestAllocationsUseCase: ManageRequestAllocationsUseCase,
     private readonly auditLogRepository: IAuditLogRepository,
     private readonly tokensRepository: ITokensRepository,
     private readonly transactionManager: ITransactionManager,
@@ -92,20 +95,34 @@ export class CancelRequestUseCase {
       await this.approvalStepWriter.cancelRemaining(requestId, context);
 
       if (isApproved) {
-        const budget = await this.budgetRepository.findCoveringDate(
-          request.costCenterId,
-          new Date(),
-          context,
-        );
+        const allocations =
+          await this.manageRequestAllocationsUseCase.effectiveFor(
+            request,
+            context,
+          );
+        const shares = sumByCostCenter(allocations.lines);
+        const multiple = shares.size > 1;
 
-        if (budget) {
+        for (const [costCenterId, amountCents] of shares) {
+          const budget = await this.budgetRepository.findCoveringDate(
+            costCenterId,
+            new Date(),
+            context,
+          );
+
+          if (!budget) {
+            continue;
+          }
+
           await this.budgetEntryRepository.create(
             {
               budgetId: budget.id,
               purchaseRequestId: requestId,
               type: BudgetEntryType.REVERSAL,
-              amountCents: -request.totalAmountCents,
-              description: `Reversão do pedido ${request.number}: ${data.reason}`,
+              amountCents: -amountCents,
+              description: multiple
+                ? `Reversão do pedido ${request.number} (rateio): ${data.reason}`
+                : `Reversão do pedido ${request.number}: ${data.reason}`,
               recordedById: actor.userId,
             },
             context,

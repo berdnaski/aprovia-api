@@ -47,7 +47,10 @@ describe('resolveStatusAfterReceipt', () => {
 
   it('nunca devolve saldo pendente negativo', () => {
     expect(
-      pendingQuantity({ orderedQuantity: '10.000', receivedQuantity: '12.000' }),
+      pendingQuantity({
+        orderedQuantity: '10.000',
+        receivedQuantity: '12.000',
+      }),
     ).toBe('0.000');
   });
 });

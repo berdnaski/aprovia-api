@@ -1,12 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {ArrayMaxSize,
+import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
   IsOptional,
   IsUUID,
-  ValidateNested, IsNotEmpty } from 'class-validator';
+  ValidateNested,
+  IsNotEmpty,
+} from 'class-validator';
 import { ApproverType } from 'generated/prisma/enums';
 
 const toBigInt = ({

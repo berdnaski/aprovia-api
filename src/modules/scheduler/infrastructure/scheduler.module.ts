@@ -7,6 +7,7 @@ import { PurchaseRequestsModule } from 'src/modules/purchase-requests/infrastruc
 import { AnalyticsModule } from 'src/modules/analytics/infrastructure/analytics.module';
 import { InvitesModule } from 'src/modules/invites/infrastructure/invites.module';
 import { SuppliersModule } from 'src/modules/suppliers/infrastructure/suppliers.module';
+import { RecurringContractsModule } from 'src/modules/recurring-contracts/infrastructure/recurring-contracts.module';
 import { EscalateStaleStepsUseCase } from '../application/escalate-stale-steps.use-case';
 import { ExpireStaleInvitesUseCase } from '../application/expire-stale-invites.use-case';
 import { PurgeExpiredTokensUseCase } from '../application/purge-expired-tokens.use-case';
@@ -26,6 +27,7 @@ import { SchedulerJobs } from './scheduler.jobs';
     InvitesModule,
     AnalyticsModule,
     SuppliersModule,
+    RecurringContractsModule,
   ],
   providers: [
     SendSlaRemindersUseCase,

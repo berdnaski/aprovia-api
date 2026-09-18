@@ -41,10 +41,7 @@ export class ManagePlansUseCase {
     return this.planRepository.create(data);
   }
 
-  async update(
-    id: string,
-    data: Partial<WritePlanData>,
-  ): Promise<PlanEntity> {
+  async update(id: string, data: Partial<WritePlanData>): Promise<PlanEntity> {
     const plan = await this.planRepository.findById(id);
 
     if (!plan) {

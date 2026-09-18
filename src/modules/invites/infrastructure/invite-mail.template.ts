@@ -6,6 +6,7 @@ export const ROLE_LABEL: Record<CompanyMemberRole, string> = {
   REQUESTER: 'Solicitante',
   APPROVER: 'Aprovador',
   FINANCE_ADMIN: 'Admin Financeiro',
+  ACCOUNTANT: 'Contador',
 };
 
 export interface InviteMailInput {

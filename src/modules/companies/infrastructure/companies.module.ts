@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ApprovalRulesModule } from 'src/modules/approval-rules/infrastructure/approval-rules.module';
 import { AuthModule } from 'src/modules/auth/infrastructure/auth.module';
+import { ChartAccountsModule } from 'src/modules/chart-accounts/infrastructure/chart-accounts.module';
 import { CostCentersModule } from 'src/modules/cost-centers/infrastructure/cost-centers.module';
 import { SuppliersModule } from 'src/modules/suppliers/infrastructure/suppliers.module';
 import { UsersModule } from 'src/modules/users/infrastructure/users.module';
@@ -36,6 +37,7 @@ import { OnboardingController } from './onboarding.controller';
     forwardRef(() => CostCentersModule),
     forwardRef(() => ApprovalRulesModule),
     SuppliersModule,
+    ChartAccountsModule,
   ],
   controllers: [
     CompaniesController,

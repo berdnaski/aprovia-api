@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {IsString, Length, Matches, MaxLength, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class RequestItemDto {
   @ApiProperty({ example: 'Notebook Dell i7 16GB', maxLength: 300 })

@@ -1,7 +1,12 @@
-import { RegistrationStatus, ValidationStatus } from 'generated/prisma/enums';
+import {
+  RegistrationStatus,
+  TaxRegime,
+  TaxRegimeSource,
+  ValidationStatus,
+} from 'generated/prisma/enums';
 import { Page } from 'src/shared/dto/pagination-query.dto';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
-import { SupplierEntity } from './supplier.entity';
+import { SupplierEntity, SupplierPartner } from './supplier.entity';
 
 export interface SupplierAddressData {
   street?: string | null;
@@ -12,7 +17,23 @@ export interface SupplierAddressData {
   phone?: string | null;
 }
 
-export interface CreateSupplierData extends SupplierAddressData {
+export interface SupplierFiscalData {
+  openedOn?: Date | null;
+  legalNature?: string | null;
+  companySize?: string | null;
+  shareCapitalCents?: bigint | null;
+  mainActivityCode?: string | null;
+  mainActivityDescription?: string | null;
+  simplesOpted?: boolean | null;
+  meiOpted?: boolean | null;
+  taxRegime?: TaxRegime;
+  taxRegimeSource?: TaxRegimeSource | null;
+  stateRegistration?: string | null;
+  partners?: SupplierPartner[];
+}
+
+export interface CreateSupplierData
+  extends SupplierAddressData, SupplierFiscalData {
   companyId: string;
   cnpj: string;
   legalName: string;
@@ -22,12 +43,15 @@ export interface CreateSupplierData extends SupplierAddressData {
   validatedAt: Date | null;
 }
 
-export interface UpdateSupplierData extends SupplierAddressData {
+export interface UpdateSupplierData
+  extends SupplierAddressData, SupplierFiscalData {
   legalName?: string;
   tradeName?: string | null;
+  municipalRegistration?: string | null;
 }
 
-export interface RefreshSupplierValidationData extends SupplierAddressData {
+export interface RefreshSupplierValidationData
+  extends SupplierAddressData, SupplierFiscalData {
   legalName?: string;
   tradeName?: string | null;
   registrationStatus: RegistrationStatus;

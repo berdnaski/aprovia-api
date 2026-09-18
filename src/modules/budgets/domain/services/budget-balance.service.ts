@@ -11,6 +11,9 @@ export interface BudgetBalance {
   underReviewCents: bigint;
   availableCents: bigint;
   usagePercent: number;
+  realizedCents: bigint;
+  varianceCents: bigint;
+  realizedPercent: number;
 }
 
 export const BudgetVerdict = {
@@ -35,6 +38,7 @@ export class BudgetBalanceService {
     budget: BudgetEntity,
     committedCents: bigint,
     underReviewCents = 0n,
+    realizedCents = 0n,
   ): BudgetBalance {
     const availableCents = budget.totalAmountCents - committedCents;
 
@@ -48,6 +52,12 @@ export class BudgetBalanceService {
       underReviewCents,
       availableCents,
       usagePercent: this.usagePercent(budget.totalAmountCents, committedCents),
+      realizedCents,
+      varianceCents: budget.totalAmountCents - realizedCents,
+      realizedPercent: this.usagePercent(
+        budget.totalAmountCents,
+        realizedCents,
+      ),
     };
   }
 

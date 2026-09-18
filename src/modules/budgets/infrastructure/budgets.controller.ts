@@ -5,11 +5,17 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
   Res,
   StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiBody,
+  ApiConsumes,
   ApiCookieAuth,
   ApiOperation,
   ApiQuery,
@@ -20,14 +26,27 @@ import { BudgetEntryType, CompanyMemberRole } from 'generated/prisma/enums';
 import { CurrentCompany } from 'src/shared/decorators/current-company.decorator';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
 import { Roles } from 'src/shared/decorators/roles.decorator';
+import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { Response } from 'express';
 import { BudgetEntryEntity } from '../domain/budget-entry.entity';
 import { FindBudgetByIdUseCase } from '../application/find-budget-by-id.use-case';
+import { GetBudgetDocumentDownloadUrlUseCase } from '../application/get-budget-document-download-url.use-case';
+import { ListBudgetDocumentsUseCase } from '../application/list-budget-documents.use-case';
 import { ListBudgetEntriesUseCase } from '../application/list-budget-entries.use-case';
 import { UpdateBudgetUseCase } from '../application/update-budget.use-case';
+import { UploadBudgetDocumentUseCase } from '../application/upload-budget-document.use-case';
+import { BudgetDocumentResponseDto } from '../dto/budget-document-response.dto';
 import { BudgetEntryResponseDto } from '../dto/budget-entry-response.dto';
 import { BudgetResponseDto } from '../dto/budget-response.dto';
+import { DownloadUrlResponseDto } from '../dto/download-url-response.dto';
 import { UpdateBudgetDto } from '../dto/update-budget.dto';
+
+interface UploadedFileLike {
+  originalname: string;
+  buffer: Buffer;
+}
+
+const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_SIZE_BYTES ?? 10485760);
 
 @ApiTags('Orçamento')
 @ApiCookieAuth('access_token')
@@ -37,10 +56,13 @@ export class BudgetsController {
     private readonly findBudgetByIdUseCase: FindBudgetByIdUseCase,
     private readonly updateBudgetUseCase: UpdateBudgetUseCase,
     private readonly listBudgetEntriesUseCase: ListBudgetEntriesUseCase,
+    private readonly uploadBudgetDocumentUseCase: UploadBudgetDocumentUseCase,
+    private readonly listBudgetDocumentsUseCase: ListBudgetDocumentsUseCase,
+    private readonly getBudgetDocumentDownloadUrlUseCase: GetBudgetDocumentDownloadUrlUseCase,
   ) {}
 
   @Get(':id')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
   @ApiOperation({ summary: 'Buscar orçamento por ID' })
   @ApiResponse({ status: 200, type: BudgetResponseDto })
   @ApiResponse({ status: 404, description: 'Orçamento não encontrado' })
@@ -76,7 +98,7 @@ export class BudgetsController {
   }
 
   @Get(':id/entries')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
   @ApiOperation({
     summary: 'Extrato de movimentações do orçamento',
     description:
@@ -108,7 +130,7 @@ export class BudgetsController {
   }
 
   @Get(':id/entries/export')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
   @ApiOperation({
     summary: 'Exportar o extrato do orçamento em CSV',
     description:
@@ -156,6 +178,90 @@ export class BudgetsController {
     return [header, ...rows]
       .map((row) => row.map((cell) => this.escape(cell)).join(';'))
       .join('\r\n');
+  }
+
+  @Get(':id/documents')
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
+  @ApiOperation({
+    summary: 'Documentos de apoio do orçamento (data room)',
+    description:
+      'Planilhas, propostas e outros documentos que sustentam o valor do orçamento. Nunca são substituídos ou apagados.',
+  })
+  @ApiResponse({ status: 200, type: [BudgetDocumentResponseDto] })
+  async listDocuments(
+    @CurrentCompany() companyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<BudgetDocumentResponseDto[]> {
+    const documents = await this.listBudgetDocumentsUseCase.execute(
+      id,
+      companyId,
+    );
+    return BudgetDocumentResponseDto.fromEntities(documents);
+  }
+
+  @Post(':id/documents')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        description: { type: 'string' },
+      },
+    },
+  })
+  @ApiOperation({
+    summary: 'Anexar documento de apoio ao orçamento',
+    description:
+      'Aceita PDF ou imagem. O arquivo entra imutável, com hash sha256 para conferência.',
+  })
+  @ApiResponse({ status: 201, type: BudgetDocumentResponseDto })
+  async uploadDocument(
+    @CurrentCompany() companyId: string,
+    @CurrentUser('userId') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: UploadedFileLike | undefined,
+    @Body('description') description?: string,
+  ): Promise<BudgetDocumentResponseDto> {
+    if (!file) {
+      throw new ValidationError('Nenhum arquivo enviado no campo "file"');
+    }
+
+    const document = await this.uploadBudgetDocumentUseCase.execute(
+      id,
+      companyId,
+      userId,
+      {
+        fileName: file.originalname,
+        buffer: file.buffer,
+        description,
+      },
+    );
+
+    return BudgetDocumentResponseDto.fromEntity(document);
+  }
+
+  @Get(':id/documents/:documentId/download')
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
+  @ApiOperation({ summary: 'Gerar link assinado para baixar o documento' })
+  @ApiResponse({ status: 200, type: DownloadUrlResponseDto })
+  async downloadDocument(
+    @CurrentCompany() companyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+  ): Promise<DownloadUrlResponseDto> {
+    const url = await this.getBudgetDocumentDownloadUrlUseCase.execute(
+      id,
+      documentId,
+      companyId,
+    );
+    return { url };
   }
 
   private toBrl(cents: bigint): string {

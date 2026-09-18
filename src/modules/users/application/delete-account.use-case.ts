@@ -39,9 +39,8 @@ export class DeleteAccountUseCase {
 
     await this.userRepository.anonymize(id);
 
-    const { orphaned } = await this.storageCleanupService.removeMany(
-      storageKeys,
-    );
+    const { orphaned } =
+      await this.storageCleanupService.removeMany(storageKeys);
 
     if (orphaned > 0) {
       this.logger.error(

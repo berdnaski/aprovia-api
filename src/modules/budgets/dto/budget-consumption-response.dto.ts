@@ -39,6 +39,25 @@ export class BudgetConsumptionResponseDto {
   @ApiProperty({ example: 25, description: 'Percentual de uso do período' })
   usagePercent: number;
 
+  @ApiProperty({
+    example: '980000',
+    description:
+      'Soma das contas pagas (payables com status PAID) rateadas para este centro de custo dentro do período — o realizado de fato, não o comprometido.',
+  })
+  realizedCents: string;
+
+  @ApiProperty({
+    example: '4020000',
+    description: 'Orçamento menos realizado.',
+  })
+  varianceCents: string;
+
+  @ApiProperty({
+    example: 19.6,
+    description: 'Percentual do orçamento já realizado (pago).',
+  })
+  realizedPercent: number;
+
   static fromBalance(balance: BudgetBalance): BudgetConsumptionResponseDto {
     const dto = new BudgetConsumptionResponseDto();
     dto.budgetId = balance.budgetId;
@@ -50,6 +69,9 @@ export class BudgetConsumptionResponseDto {
     dto.underReviewCents = balance.underReviewCents.toString();
     dto.availableCents = balance.availableCents.toString();
     dto.usagePercent = balance.usagePercent;
+    dto.realizedCents = balance.realizedCents.toString();
+    dto.varianceCents = balance.varianceCents.toString();
+    dto.realizedPercent = balance.realizedPercent;
     return dto;
   }
 }

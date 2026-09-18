@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
+import { IPayableAllocationRepository } from 'src/modules/matching/domain/payable-allocations.repository.interface';
 import { TransactionContext } from 'src/shared/domain/transaction.manager';
 import { IBudgetEntryRepository } from '../domain/budget-entries.repository.interface';
 import { BudgetNotFoundForPeriodError } from '../domain/budgets.errors';
@@ -18,6 +19,7 @@ export class GetBudgetConsumptionUseCase {
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
     private readonly budgetBalanceService: BudgetBalanceService,
     private readonly underReviewRegistry: UnderReviewRegistry,
+    private readonly payableAllocationRepository: IPayableAllocationRepository,
   ) {}
 
   async execute(
@@ -42,20 +44,28 @@ export class GetBudgetConsumptionUseCase {
       throw new BudgetNotFoundForPeriodError(reference);
     }
 
-    const [committedCents, underReviewCents] = await Promise.all([
-      this.budgetEntryRepository.sumByBudget(budget.id, context),
-      this.underReviewRegistry.sumFor(
-        costCenterId,
-        budget.periodStart,
-        budget.periodEnd,
-        context,
-      ),
-    ]);
+    const [committedCents, underReviewCents, realizedCents] =
+      await Promise.all([
+        this.budgetEntryRepository.sumByBudget(budget.id, context),
+        this.underReviewRegistry.sumFor(
+          costCenterId,
+          budget.periodStart,
+          budget.periodEnd,
+          context,
+        ),
+        this.payableAllocationRepository.sumPaidByCostCenterAndPeriod(
+          costCenterId,
+          budget.periodStart,
+          budget.periodEnd,
+          context,
+        ),
+      ]);
 
     return this.budgetBalanceService.build(
       budget,
       committedCents,
       underReviewCents,
+      realizedCents,
     );
   }
 }

@@ -56,7 +56,9 @@ export class UsersController {
 
   @Post('me/avatar')
   @UseInterceptors(
-    FileInterceptor('avatar', { limits: { fileSize: MAX_AVATAR_BYTES, files: 1 } }),
+    FileInterceptor('avatar', {
+      limits: { fileSize: MAX_AVATAR_BYTES, files: 1 },
+    }),
   )
   @ApiConsumes('multipart/form-data')
   @ApiBody({

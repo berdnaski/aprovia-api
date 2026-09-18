@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IssueSessionService } from 'src/modules/auth/application/services/issue-session.service';
+import { ApplyModelChartUseCase } from 'src/modules/chart-accounts/application/apply-model-chart.use-case';
 import { StartTrialUseCase } from 'src/modules/billing/application/start-trial.use-case';
 import { AuthTokenEntity } from 'src/modules/auth/domain/auth-token.entity';
 import { FindUserByIdUseCase } from 'src/modules/users/application/find-user-by-id.use-case';
@@ -24,6 +25,7 @@ export class CreateCompanyUseCase {
     private readonly findUserByIdUseCase: FindUserByIdUseCase,
     private readonly issueSessionService: IssueSessionService,
     private readonly startTrialUseCase: StartTrialUseCase,
+    private readonly applyModelChartUseCase: ApplyModelChartUseCase,
   ) {}
 
   async execute(
@@ -50,6 +52,7 @@ export class CreateCompanyUseCase {
         categories: DEFAULT_CATEGORIES,
       });
 
+      await this.applyModelChartUseCase.execute(company.id, userId);
       await this.startTrialUseCase.execute(company.id);
 
       const tokens = await this.issueSessionService.execute(user, {

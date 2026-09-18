@@ -21,6 +21,7 @@ export class CategoryRepository implements ICategoryRepository {
         company_id: data.companyId,
         name: data.name,
         description: data.description,
+        default_account_id: data.defaultAccountId,
       },
     });
 
@@ -56,7 +57,11 @@ export class CategoryRepository implements ICategoryRepository {
   async update(id: string, data: UpdateCategoryData): Promise<CategoryEntity> {
     const raw = await this.prisma.category.update({
       where: { id },
-      data: { name: data.name, description: data.description },
+      data: {
+        name: data.name,
+        description: data.description,
+        default_account_id: data.defaultAccountId,
+      },
     });
 
     return CategoryMapper.toDomain(raw);

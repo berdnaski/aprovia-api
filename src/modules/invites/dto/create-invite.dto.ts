@@ -7,7 +7,7 @@ export class CreateInviteDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ enum: ['REQUESTER', 'APPROVER', 'FINANCE_ADMIN'] })
+  @ApiProperty({ enum: ['REQUESTER', 'APPROVER', 'FINANCE_ADMIN', 'ACCOUNTANT'] })
   @IsEnum(CompanyMemberRole)
   role: CompanyMemberRole;
 

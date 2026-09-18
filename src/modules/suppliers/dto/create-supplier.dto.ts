@@ -6,6 +6,7 @@ import {
   Length,
   MaxLength,
 } from 'class-validator';
+import { TaxRegime } from 'generated/prisma/enums';
 
 export class CreateSupplierDto {
   @ApiProperty({
@@ -67,4 +68,19 @@ export class CreateSupplierDto {
   @IsString()
   @MaxLength(20)
   phone?: string | null;
+
+  @ApiPropertyOptional({
+    enum: TaxRegime,
+    description:
+      'Só use quando a consulta à Receita não trouxer o regime correto. Uma vez definido manualmente, a revalidação automática não sobrescreve.',
+  })
+  @IsOptional()
+  @IsString()
+  taxRegime?: TaxRegime;
+
+  @ApiPropertyOptional({ maxLength: 20, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  municipalRegistration?: string | null;
 }

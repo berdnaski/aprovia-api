@@ -45,7 +45,12 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
       where: { id },
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatar_storage_key: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar_storage_key: true,
+          },
         },
       },
     });
@@ -73,7 +78,12 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true, avatar_storage_key: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar_storage_key: true,
+          },
         },
       },
       orderBy: { created_at: 'asc' },

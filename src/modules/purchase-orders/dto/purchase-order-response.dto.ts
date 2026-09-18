@@ -19,7 +19,10 @@ export class PurchaseOrderItemResponseDto {
   @ApiProperty({ example: 'UN' })
   unit: string;
 
-  @ApiProperty({ example: '250000', description: 'Valor unitário em centavos.' })
+  @ApiProperty({
+    example: '250000',
+    description: 'Valor unitário em centavos.',
+  })
   unitPriceCents: string;
 
   @ApiProperty({ example: '2500000' })

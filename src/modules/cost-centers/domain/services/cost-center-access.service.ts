@@ -8,7 +8,10 @@ export function costCenterScopeFor(
   role: CompanyMemberRole,
   memberId: string,
 ): string | undefined {
-  return role === CompanyMemberRole.FINANCE_ADMIN ? undefined : memberId;
+  return role === CompanyMemberRole.FINANCE_ADMIN ||
+    role === CompanyMemberRole.ACCOUNTANT
+    ? undefined
+    : memberId;
 }
 
 @Injectable()

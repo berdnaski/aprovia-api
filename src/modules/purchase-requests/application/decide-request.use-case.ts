@@ -11,6 +11,7 @@ import {
 import { AuditEntity } from 'src/modules/audit/domain/audit-log.entity';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { IBudgetEntryRepository } from 'src/modules/budgets/domain/budget-entries.repository.interface';
+import { BudgetEntity } from 'src/modules/budgets/domain/budget.entity';
 import { IBudgetRepository } from 'src/modules/budgets/domain/budgets.repository.interface';
 import { EntitlementsService } from 'src/modules/billing/application/entitlements.service';
 import { BudgetPeriodService } from 'src/modules/budgets/domain/services/budget-period.service';
@@ -37,6 +38,7 @@ import {
 import { IDecisionRepository } from '../domain/decisions.repository.interface';
 import { PurchaseRequestEntity } from '../domain/purchase-request.entity';
 import { IPurchaseRequestRepository } from '../domain/purchase-requests.repository.interface';
+import { sumByCostCenter } from '../domain/services/allocation-split';
 import { DecideRequestDto } from '../dto/decide-request.dto';
 import {
   FindRequestByIdUseCase,
@@ -46,6 +48,7 @@ import {
   GetRequestBudgetUseCase,
   RequestBudgetVerdict,
 } from './get-request-budget.use-case';
+import { ManageRequestAllocationsUseCase } from './manage-request-allocations.use-case';
 import { NotifyPendingApprovalUseCase } from './notify-pending-approval.use-case';
 
 export type DecideRequestInput = DecideRequestDto & {
@@ -62,6 +65,13 @@ const NEEDS_JUSTIFICATION: DecisionType[] = [
 
 const BUDGET_ALERT_THRESHOLDS = [80, 100] as const;
 
+interface CostCenterShare {
+  costCenterId: string;
+  amountCents: bigint;
+  budget: BudgetEntity | null;
+  committed: bigint;
+}
+
 @Injectable()
 export class DecideRequestUseCase {
   constructor(
@@ -72,6 +82,7 @@ export class DecideRequestUseCase {
     private readonly budgetEntryRepository: IBudgetEntryRepository,
     private readonly findRequestByIdUseCase: FindRequestByIdUseCase,
     private readonly getRequestBudgetUseCase: GetRequestBudgetUseCase,
+    private readonly manageRequestAllocationsUseCase: ManageRequestAllocationsUseCase,
     private readonly assertSupplierUsableUseCase: AssertSupplierUsableUseCase,
     private readonly findCostCenterByIdUseCase: FindCostCenterByIdUseCase,
     private readonly findCompanyByIdUseCase: FindCompanyByIdUseCase,
@@ -181,13 +192,32 @@ export class DecideRequestUseCase {
       );
     }
 
-    const budget = await this.budgetRepository.findCoveringDate(
-      request.costCenterId,
-      new Date(),
-    );
-    const committed = budget
-      ? await this.budgetEntryRepository.sumByBudget(budget.id)
-      : 0n;
+    const allocations =
+      await this.manageRequestAllocationsUseCase.effectiveFor(request);
+    const shares: CostCenterShare[] = [];
+
+    for (const [costCenterId, amountCents] of sumByCostCenter(
+      allocations.lines,
+    )) {
+      const covering = await this.budgetRepository.findCoveringDate(
+        costCenterId,
+        new Date(),
+      );
+      shares.push({
+        costCenterId,
+        amountCents,
+        budget: covering,
+        committed: covering
+          ? await this.budgetEntryRepository.sumByBudget(covering.id)
+          : 0n,
+      });
+    }
+
+    const primary =
+      shares.find((share) => share.costCenterId === request.costCenterId) ??
+      shares[0];
+    const budget = primary.budget;
+    const committed = primary.committed;
 
     const total = budget?.totalAmountCents ?? 0n;
 
@@ -287,14 +317,21 @@ export class DecideRequestUseCase {
         return request;
       }
 
-      if (budget) {
+      for (const share of shares) {
+        if (!share.budget) {
+          continue;
+        }
+
         await this.budgetEntryRepository.create(
           {
-            budgetId: budget.id,
+            budgetId: share.budget.id,
             purchaseRequestId: request.id,
             type: BudgetEntryType.CONSUMPTION,
-            amountCents: request.totalAmountCents,
-            description: `Aprovação do pedido ${request.number}`,
+            amountCents: share.amountCents,
+            description:
+              shares.length > 1
+                ? `Aprovação do pedido ${request.number} (rateio)`
+                : `Aprovação do pedido ${request.number}`,
             recordedById: actor.userId,
           },
           context,
@@ -376,17 +413,24 @@ export class DecideRequestUseCase {
       });
     }
 
-    if (consumed && budget) {
-      const consumedAfter = committed + request.totalAmountCents;
+    for (const share of consumed ? shares : []) {
+      const shareBudget = share.budget;
+
+      if (!shareBudget) {
+        continue;
+      }
+
+      const limit = shareBudget.totalAmountCents;
+      const consumedAfter = share.committed + share.amountCents;
       const crossed = BUDGET_ALERT_THRESHOLDS.filter(
         (threshold) =>
-          committed * 100n < BigInt(threshold) * total &&
-          consumedAfter * 100n >= BigInt(threshold) * total,
+          share.committed * 100n < BigInt(threshold) * limit &&
+          consumedAfter * 100n >= BigInt(threshold) * limit,
       );
 
       if (crossed.length > 0) {
         const costCenter = await this.findCostCenterByIdUseCase.execute(
-          request.costCenterId,
+          share.costCenterId,
           actor.companyId,
         );
         const admins =
@@ -404,15 +448,15 @@ export class DecideRequestUseCase {
               companyId: actor.companyId,
               event: NotificationEvent.BUDGET_ALERT,
               recipient: { kind: RecipientKind.MEMBER, memberId },
-              scope: `${budget.id}:${threshold}`,
+              scope: `${shareBudget.id}:${threshold}`,
               params: {
                 costCenterId: costCenter.id,
                 costCenterName: costCenter.name,
                 thresholdPercent: threshold,
                 period: this.budgetPeriodService.currentMonthKey(
-                  budget.periodStart,
+                  shareBudget.periodStart,
                 ),
-                totalCents: total.toString(),
+                totalCents: limit.toString(),
                 committedCents: consumedAfter.toString(),
               },
             });

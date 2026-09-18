@@ -8,6 +8,7 @@ import {
 } from 'generated/prisma/enums';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { IInvoiceRepository } from 'src/modules/invoices/domain/invoices.repository.interface';
+import { IPurchaseOrderRepository } from 'src/modules/purchase-orders/domain/purchase-orders.repository.interface';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
 import { MatchResultEntity } from '../domain/match-result.entity';
 import {
@@ -17,7 +18,9 @@ import {
   OverrideJustificationRequiredError,
 } from '../domain/matching.errors';
 import { IMatchResultRepository } from '../domain/matching.repository.interface';
+import { IPayableAllocationRepository } from '../domain/payable-allocations.repository.interface';
 import { IPayableRepository } from '../domain/payables.repository.interface';
+import { DerivePayableAllocationsUseCase } from './derive-payable-allocations.use-case';
 
 const MIN_NOTE_LENGTH = 10;
 
@@ -28,6 +31,9 @@ export class OverrideMatchUseCase {
     private readonly invoiceRepository: IInvoiceRepository,
     private readonly payableRepository: IPayableRepository,
     private readonly auditLogRepository: IAuditLogRepository,
+    private readonly derivePayableAllocationsUseCase: DerivePayableAllocationsUseCase,
+    private readonly payableAllocationRepository: IPayableAllocationRepository,
+    private readonly purchaseOrderRepository: IPurchaseOrderRepository,
   ) {}
 
   async execute(
@@ -70,7 +76,7 @@ export class OverrideMatchUseCase {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
 
-    await this.payableRepository.create({
+    const payable = await this.payableRepository.create({
       companyId: actor.companyId,
       invoiceId: invoice.id,
       supplierId: invoice.supplierId as string,
@@ -81,6 +87,27 @@ export class OverrideMatchUseCase {
       releasedById: actor.memberId,
       releaseNote: note,
     });
+
+    const order = await this.purchaseOrderRepository.findById(
+      match.purchaseOrderId,
+      actor.companyId,
+    );
+
+    const allocations = await this.derivePayableAllocationsUseCase.execute(
+      order?.purchaseRequestId ?? null,
+      payable.amountCents,
+    );
+
+    if (allocations.length > 0) {
+      await this.payableAllocationRepository.replace(
+        payable.id,
+        allocations.map((line) => ({
+          costCenterId: line.costCenterId,
+          chartAccountId: line.chartAccountId,
+          amountCents: line.amountCents,
+        })),
+      );
+    }
 
     await this.auditLogRepository.record({
       companyId: actor.companyId,

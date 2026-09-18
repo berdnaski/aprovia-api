@@ -95,6 +95,7 @@ export class CostCentersController {
     CompanyMemberRole.REQUESTER,
     CompanyMemberRole.APPROVER,
     CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
   )
   @ApiOperation({ summary: 'Listar Centros de Custo' })
   @ApiQuery({ name: 'includeDisabled', required: false, type: Boolean })
@@ -187,7 +188,7 @@ export class CostCentersController {
   }
 
   @Get(':id')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
   @ApiOperation({ summary: 'Buscar Centro de Custo por ID' })
   @ApiResponse({ status: 200, type: CostCenterResponseDto })
   @ApiResponse({ status: 404, description: 'Centro de Custo não encontrado' })

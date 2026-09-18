@@ -1,7 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { RegistrationStatus, ValidationStatus } from 'generated/prisma/enums';
+import {
+  RegistrationStatus,
+  TaxRegime,
+  TaxRegimeSource,
+  ValidationStatus,
+} from 'generated/prisma/enums';
 import { formatCnpj } from 'src/shared/domain/cnpj';
-import { SupplierEntity } from '../domain/supplier.entity';
+import { SupplierEntity, SupplierPartner } from '../domain/supplier.entity';
 import {
   SupplierEligibility,
   SupplierUsage,
@@ -70,6 +75,45 @@ export class SupplierResponseDto {
   @ApiProperty({ nullable: true, type: String })
   usageReason: string | null;
 
+  @ApiProperty({ nullable: true, type: String })
+  openedOn: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  legalNature: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  companySize: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  shareCapitalCents: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  mainActivityCode: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  mainActivityDescription: string | null;
+
+  @ApiProperty({ nullable: true, type: Boolean })
+  simplesOpted: boolean | null;
+
+  @ApiProperty({ nullable: true, type: Boolean })
+  meiOpted: boolean | null;
+
+  @ApiProperty({ enum: TaxRegime })
+  taxRegime: TaxRegime;
+
+  @ApiProperty({ enum: TaxRegimeSource, nullable: true, type: String })
+  taxRegimeSource: TaxRegimeSource | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  stateRegistration: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  municipalRegistration: string | null;
+
+  @ApiProperty({ type: [Object] })
+  partners: SupplierPartner[];
+
   @ApiProperty()
   createdAt: Date;
 
@@ -95,6 +139,19 @@ export class SupplierResponseDto {
     dto.blocked = entity.blocked;
     dto.usage = eligibility.usage;
     dto.usageReason = eligibility.reason;
+    dto.openedOn = entity.openedOn ? entity.openedOn.toISOString() : null;
+    dto.legalNature = entity.legalNature;
+    dto.companySize = entity.companySize;
+    dto.shareCapitalCents = entity.shareCapitalCents?.toString() ?? null;
+    dto.mainActivityCode = entity.mainActivityCode;
+    dto.mainActivityDescription = entity.mainActivityDescription;
+    dto.simplesOpted = entity.simplesOpted;
+    dto.meiOpted = entity.meiOpted;
+    dto.taxRegime = entity.taxRegime;
+    dto.taxRegimeSource = entity.taxRegimeSource;
+    dto.stateRegistration = entity.stateRegistration;
+    dto.municipalRegistration = entity.municipalRegistration;
+    dto.partners = entity.partners;
     dto.createdAt = entity.createdAt;
 
     return dto;

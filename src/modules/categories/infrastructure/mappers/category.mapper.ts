@@ -10,6 +10,7 @@ export class CategoryMapper {
     entity.name = raw.name;
     entity.description = raw.description;
     entity.active = raw.active;
+    entity.defaultAccountId = raw.default_account_id;
     entity.createdAt = raw.created_at;
     entity.updatedAt = raw.updated_at;
 

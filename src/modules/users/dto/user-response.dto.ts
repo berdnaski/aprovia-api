@@ -36,7 +36,9 @@ export class UserResponseDto {
     dto.email = entity.email;
     dto.phone = entity.phone;
     dto.avatarUrl =
-      entity.avatarStorageKey === null ? null : `/api/users/${entity.id}/avatar`;
+      entity.avatarStorageKey === null
+        ? null
+        : `/api/users/${entity.id}/avatar`;
     dto.emailVerified = entity.emailVerified;
     dto.isSuperAdmin = entity.isSuperAdmin;
     dto.termsAcceptedAt = entity.termsAcceptedAt;

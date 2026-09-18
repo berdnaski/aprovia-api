@@ -7,6 +7,11 @@ export const AuditEntity = {
   COMPANY_MEMBER: 'company_member',
   COST_CENTER: 'cost_center',
   SUPPLIER: 'supplier',
+  SUPPLIER_BANK_ACCOUNT: 'supplier_bank_account',
+  CHART_ACCOUNT: 'chart_account',
+  CATEGORY: 'category',
+  PAYABLE: 'payable',
+  RECURRING_CONTRACT: 'recurring_contract',
 } as const;
 
 export type AuditEntity = (typeof AuditEntity)[keyof typeof AuditEntity];

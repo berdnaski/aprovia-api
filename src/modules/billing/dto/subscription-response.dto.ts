@@ -80,7 +80,10 @@ export class SubscriptionResponseDto {
   @ApiProperty({ nullable: true, type: Number })
   maxMembers: number | null;
 
-  @ApiProperty({ example: 42, description: 'Pedidos enviados no mês corrente.' })
+  @ApiProperty({
+    example: 42,
+    description: 'Pedidos enviados no mês corrente.',
+  })
   usedRequestsMonth: number;
 
   @ApiProperty({ type: Number, nullable: true })

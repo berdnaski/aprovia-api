@@ -9,6 +9,7 @@ import { RevalidateSuppliersUseCase } from '../application/revalidate-suppliers.
 import { RollOverBudgetsUseCase } from '../application/roll-over-budgets.use-case';
 import { SendMonthlyReportsUseCase } from '../application/send-monthly-reports.use-case';
 import { SendSlaRemindersUseCase } from '../application/send-sla-reminders.use-case';
+import { GenerateRecurringOccurrencesUseCase } from 'src/modules/recurring-contracts/application/generate-recurring-occurrences.use-case';
 
 const TIMEZONE = 'America/Sao_Paulo';
 
@@ -24,6 +25,7 @@ export class SchedulerJobs {
     private readonly revalidateSuppliersUseCase: RevalidateSuppliersUseCase,
     private readonly expireStaleInvitesUseCase: ExpireStaleInvitesUseCase,
     private readonly sendMonthlyReportsUseCase: SendMonthlyReportsUseCase,
+    private readonly generateRecurringOccurrencesUseCase: GenerateRecurringOccurrencesUseCase,
     private readonly configService: ConfigService,
   ) {}
 
@@ -54,6 +56,13 @@ export class SchedulerJobs {
       const summary = await this.revalidateSuppliersUseCase.execute();
       return summary.checked;
     });
+  }
+
+  @Cron('0 6 * * *', { name: 'recurring-contracts', timeZone: TIMEZONE })
+  generateRecurringOccurrences(): Promise<void> {
+    return this.run('assinaturas recorrentes', () =>
+      this.generateRecurringOccurrencesUseCase.execute(),
+    );
   }
 
   @Cron('0 4 * * *', { name: 'token-purge', timeZone: TIMEZONE })

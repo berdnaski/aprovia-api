@@ -91,7 +91,6 @@ export class PlatformController {
     }));
   }
 
-
   @Get('features')
   @ApiOperation({
     summary: 'Catálogo de funcionalidades que os planos controlam',

@@ -70,7 +70,9 @@ export function resolveReceiptStatus(
 
     const incoming = line ? Number(line.quantity) : 0;
 
-    return Number(item.receivedQuantity) + incoming >= Number(item.orderedQuantity);
+    return (
+      Number(item.receivedQuantity) + incoming >= Number(item.orderedQuantity)
+    );
   });
 
   return completesOrder ? ReceiptStatus.COMPLETE : ReceiptStatus.PARTIAL;

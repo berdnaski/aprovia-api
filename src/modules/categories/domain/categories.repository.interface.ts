@@ -5,11 +5,13 @@ export interface CreateCategoryData {
   companyId: string;
   name: string;
   description: string | null;
+  defaultAccountId: string | null;
 }
 
 export interface UpdateCategoryData {
   name?: string;
   description?: string | null;
+  defaultAccountId?: string | null;
 }
 
 export interface ListCategoriesFilter {

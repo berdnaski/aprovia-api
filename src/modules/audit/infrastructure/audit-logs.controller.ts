@@ -20,7 +20,7 @@ export class AuditLogsController {
   constructor(private readonly listAuditLogsUseCase: ListAuditLogsUseCase) {}
 
   @Get()
-  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @Roles(CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
   @ApiOperation({
     summary: 'Consultar a trilha de auditoria (RF80)',
     description:

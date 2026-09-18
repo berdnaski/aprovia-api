@@ -42,7 +42,8 @@ export class RevalidateSuppliersUseCase {
       const wasFit = supplier.registrationStatus === RegistrationStatus.ACTIVE;
 
       try {
-        const refreshed = await this.revalidateSupplierUseCase.refresh(supplier);
+        const refreshed =
+          await this.revalidateSupplierUseCase.refresh(supplier);
         summary.checked += 1;
 
         if (

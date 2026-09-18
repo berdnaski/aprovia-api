@@ -100,8 +100,7 @@ export class CostCenterSummaryResponseDto {
       budget.committedCents = committed.toString();
       budget.underReviewCents = summary.underReviewCents.toString();
       budget.availableCents = available.toString();
-      budget.usagePercent =
-        total > 0n ? Number((committed * 100n) / total) : 0;
+      budget.usagePercent = total > 0n ? Number((committed * 100n) / total) : 0;
 
       dto.budget = budget;
     }

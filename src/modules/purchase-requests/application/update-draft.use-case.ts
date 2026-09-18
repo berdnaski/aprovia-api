@@ -5,8 +5,10 @@ import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/
 import { CostCenterAccessService } from 'src/modules/cost-centers/domain/services/cost-center-access.service';
 import { FindSupplierByIdUseCase } from 'src/modules/suppliers/application/find-supplier-by-id.use-case';
 import { ValidationError } from 'src/shared/domain/errors/domain.error';
+import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import { PurchaseRequestEntity } from '../domain/purchase-request.entity';
 import { IPurchaseRequestRepository } from '../domain/purchase-requests.repository.interface';
+import { IRequestAllocationRepository } from '../domain/request-allocations.repository.interface';
 import { UpdateDraftDto } from '../dto/update-draft.dto';
 import {
   FindRequestByIdUseCase,
@@ -22,6 +24,8 @@ export class UpdateDraftUseCase {
     private readonly costCenterAccessService: CostCenterAccessService,
     private readonly findCategoryByIdUseCase: FindCategoryByIdUseCase,
     private readonly findSupplierByIdUseCase: FindSupplierByIdUseCase,
+    private readonly requestAllocationRepository: IRequestAllocationRepository,
+    private readonly transactionManager: ITransactionManager,
   ) {}
 
   async execute(
@@ -29,7 +33,10 @@ export class UpdateDraftUseCase {
     actor: RequestActor,
     data: UpdateDraftDto,
   ): Promise<PurchaseRequestEntity> {
-    await this.findRequestByIdUseCase.executeAsOwnerDraft(id, actor);
+    const current = await this.findRequestByIdUseCase.executeAsOwnerDraft(
+      id,
+      actor,
+    );
 
     if (data.costCenterId) {
       const costCenter = await this.findCostCenterByIdUseCase.execute(
@@ -68,14 +75,31 @@ export class UpdateDraftUseCase {
       );
     }
 
-    return this.purchaseRequestRepository.update(id, {
-      costCenterId: data.costCenterId,
-      categoryId: data.categoryId,
-      supplierId: data.supplierId,
-      title: data.title,
-      description: data.description,
-      urgency: data.urgency,
-      paymentTerms: data.paymentTerms,
+    return this.transactionManager.run(async (context) => {
+      if (data.costCenterId && data.costCenterId !== current.costCenterId) {
+        const allocations =
+          await this.requestAllocationRepository.listByRequest(id, context);
+
+        if (
+          !allocations.some((line) => line.costCenterId === data.costCenterId)
+        ) {
+          await this.requestAllocationRepository.deleteByRequest(id, context);
+        }
+      }
+
+      return this.purchaseRequestRepository.update(
+        id,
+        {
+          costCenterId: data.costCenterId,
+          categoryId: data.categoryId,
+          supplierId: data.supplierId,
+          title: data.title,
+          description: data.description,
+          urgency: data.urgency,
+          paymentTerms: data.paymentTerms,
+        },
+        context,
+      );
     });
   }
 }

@@ -29,7 +29,9 @@ describe('RevalidateSuppliersUseCase', () => {
   } => {
     const listStaleValidations = jest.fn().mockResolvedValue(stale);
 
-    const repository = { listStaleValidations } as unknown as ISupplierRepository;
+    const repository = {
+      listStaleValidations,
+    } as unknown as ISupplierRepository;
     const revalidate = { refresh } as unknown as RevalidateSupplierUseCase;
 
     return {
@@ -44,7 +46,10 @@ describe('RevalidateSuppliersUseCase', () => {
 
     await useCase.execute(now);
 
-    const [cutoff, limit] = listStaleValidations.mock.calls[0] as [Date, number];
+    const [cutoff, limit] = listStaleValidations.mock.calls[0] as [
+      Date,
+      number,
+    ];
 
     expect(cutoff.toISOString()).toBe('2026-08-09T12:00:00.000Z');
     expect(limit).toBeGreaterThan(0);

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RequestStatus } from 'generated/prisma/enums';
+import { ChartAccountKind, RequestStatus } from 'generated/prisma/enums';
 import { PrismaService } from 'src/shared/infrastructure/database/prisma.service';
 import {
   ApprovalBottleneck,
@@ -7,6 +7,7 @@ import {
   ApproverPerformance,
   CostCenterConsumption,
   CostCenterCycleTime,
+  DreAccountLine,
   MonthlyCostCenterSummary,
   RepeatedRequest,
   StatusTotal,
@@ -75,6 +76,14 @@ interface MonthlyRow {
   manager_id: string;
   approved_count: number;
   total_cents: bigint;
+}
+
+interface DreRow {
+  chart_account_id: string;
+  code: string;
+  name: string;
+  kind: ChartAccountKind;
+  amount_cents: bigint;
 }
 
 @Injectable()
@@ -240,7 +249,6 @@ export class MetricsRepository implements IMetricsRepository {
     }));
   }
 
-
   async dailyVolume(window: MetricsWindow): Promise<DailyVolume[]> {
     const rows = await this.prisma.$queryRaw<DailyVolumeRow[]>`
       SELECT series.day::date AS day,
@@ -313,6 +321,33 @@ export class MetricsRepository implements IMetricsRepository {
       managerId: row.manager_id,
       approvedCount: row.approved_count,
       totalCents: row.total_cents,
+    }));
+  }
+
+  async dreLines(window: MetricsWindow): Promise<DreAccountLine[]> {
+    const rows = await this.prisma.$queryRaw<DreRow[]>`
+      SELECT ca.id AS chart_account_id,
+             ca.code,
+             ca.name,
+             ca.kind,
+             COALESCE(SUM(pa.amount_cents), 0)::bigint AS amount_cents
+      FROM payable_allocations pa
+      JOIN payables p ON p.id = pa.payable_id
+      JOIN chart_accounts ca ON ca.id = pa.chart_account_id
+      WHERE p.company_id = ${window.companyId}
+        AND p.status = 'PAID'
+        AND p.paid_at >= ${window.from}
+        AND p.paid_at <= ${window.to}
+      GROUP BY ca.id, ca.code, ca.name, ca.kind
+      ORDER BY ca.code
+    `;
+
+    return rows.map((row) => ({
+      chartAccountId: row.chart_account_id,
+      code: row.code,
+      name: row.name,
+      kind: row.kind,
+      amountCents: row.amount_cents,
     }));
   }
 }

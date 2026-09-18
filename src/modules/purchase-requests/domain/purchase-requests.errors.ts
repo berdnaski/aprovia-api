@@ -68,3 +68,54 @@ export class MimeTypeMismatchError extends ValidationError {
     );
   }
 }
+
+export class AllocationSharesError extends ValidationError {
+  constructor(totalBps: number) {
+    super(
+      `O rateio precisa somar 100%, e hoje soma ${(totalBps / 100).toLocaleString('pt-BR')}%. Ajuste os percentuais.`,
+      { totalBps },
+    );
+  }
+}
+
+export class AllocationLineDuplicatedError extends ValidationError {
+  constructor() {
+    super(
+      'O rateio repete o mesmo centro de custo com a mesma conta. Junte as linhas em uma só.',
+    );
+  }
+}
+
+export class PrimaryCostCenterMissingError extends ValidationError {
+  constructor() {
+    super(
+      'O centro de custo do pedido precisa aparecer no rateio, porque é ele que define quem aprova.',
+    );
+  }
+}
+
+export class AllocationLockedError extends InvalidStateError {
+  constructor(number: string) {
+    super(
+      `O pedido ${number} já está em aprovação. Nesta etapa só a conta contábil de cada linha pode mudar, não os centros de custo nem os percentuais.`,
+      { number },
+    );
+  }
+}
+
+export class AllocationForbiddenError extends ForbiddenError {
+  constructor() {
+    super(
+      'Só quem criou o rascunho pode mudar o rateio. Depois do envio, apenas o Admin Financeiro ajusta a conta contábil.',
+    );
+  }
+}
+
+export class CostCenterWithoutBudgetError extends ValidationError {
+  constructor(costCenterName: string) {
+    super(
+      `O centro de custo ${costCenterName} não tem orçamento para este mês. Peça ao Admin Financeiro para cadastrar o orçamento ou tire-o do rateio.`,
+      { costCenterName },
+    );
+  }
+}

@@ -3,6 +3,7 @@ import { BillingModule } from 'src/modules/billing/infrastructure/billing.module
 import { BudgetsModule } from 'src/modules/budgets/infrastructure/budgets.module';
 import { ExportRequestsUseCase } from '../application/export-requests.use-case';
 import { GetDashboardUseCase } from '../application/get-dashboard.use-case';
+import { GetDreUseCase } from '../application/get-dre.use-case';
 import { IExportRowsRepository } from '../domain/export-rows.repository.interface';
 import { IMetricsRepository } from '../domain/metrics.repository.interface';
 import { AnalyticsController } from './analytics.controller';
@@ -19,6 +20,7 @@ import { XlsxWriter } from './xlsx.writer';
     XlsxWriter,
     GetDashboardUseCase,
     ExportRequestsUseCase,
+    GetDreUseCase,
   ],
   exports: [IMetricsRepository],
 })

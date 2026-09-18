@@ -8,7 +8,7 @@ export function isPrismaKnownError(error: unknown): error is PrismaKnownError {
     typeof error === 'object' &&
     error !== null &&
     'code' in error &&
-    typeof (error as { code: unknown }).code === 'string' &&
+    typeof error.code === 'string' &&
     (error as { code: string }).code.startsWith('P')
   );
 }
@@ -18,4 +18,3 @@ export const PRISMA_UNIQUE_VIOLATION = 'P2002';
 export function isUniqueViolation(error: unknown): boolean {
   return isPrismaKnownError(error) && error.code === PRISMA_UNIQUE_VIOLATION;
 }
-

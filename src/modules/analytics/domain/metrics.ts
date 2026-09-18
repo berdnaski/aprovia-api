@@ -1,4 +1,4 @@
-import { RequestStatus } from 'generated/prisma/enums';
+import { ChartAccountKind, RequestStatus } from 'generated/prisma/enums';
 
 export interface StatusTotal {
   status: RequestStatus;
@@ -89,4 +89,22 @@ export interface DailyVolume {
   created: number;
   finalized: number;
   approvedCents: bigint;
+}
+
+export interface DreAccountLine {
+  chartAccountId: string;
+  code: string;
+  name: string;
+  kind: ChartAccountKind;
+  amountCents: bigint;
+}
+
+export interface DreReport {
+  from: Date;
+  to: Date;
+  revenueCents: bigint;
+  costCents: bigint;
+  expenseCents: bigint;
+  resultCents: bigint;
+  lines: DreAccountLine[];
 }
