@@ -4,6 +4,8 @@ import { ApplyModelChartUseCase } from 'src/modules/chart-accounts/application/a
 import { StartTrialUseCase } from 'src/modules/billing/application/start-trial.use-case';
 import { AuthTokenEntity } from 'src/modules/auth/domain/auth-token.entity';
 import { FindUserByIdUseCase } from 'src/modules/users/application/find-user-by-id.use-case';
+import { IApprovalRuleRepository } from 'src/modules/approval-rules/domain/approval-rules.repository.interface';
+import { DEFAULT_APPROVAL_MATRIX } from 'src/shared/constants/default-approval-matrix';
 import { DEFAULT_CATEGORIES } from 'src/shared/constants/default-categories';
 import { ConflictError } from 'src/shared/domain/errors/domain.error';
 import { isUniqueViolation } from 'src/shared/domain/prisma-error';
@@ -26,6 +28,7 @@ export class CreateCompanyUseCase {
     private readonly issueSessionService: IssueSessionService,
     private readonly startTrialUseCase: StartTrialUseCase,
     private readonly applyModelChartUseCase: ApplyModelChartUseCase,
+    private readonly approvalRuleRepository: IApprovalRuleRepository,
   ) {}
 
   async execute(
@@ -53,6 +56,11 @@ export class CreateCompanyUseCase {
       });
 
       await this.applyModelChartUseCase.execute(company.id, userId);
+      await this.approvalRuleRepository.createMany(
+        company.id,
+        { costCenterId: null, categoryId: null },
+        DEFAULT_APPROVAL_MATRIX.map((range) => ({ ...range })),
+      );
       await this.startTrialUseCase.execute(company.id);
 
       const tokens = await this.issueSessionService.execute(user, {
