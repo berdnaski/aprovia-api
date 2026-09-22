@@ -44,17 +44,26 @@ const HEADER = [
   'Valor desta linha de rateio (R$)',
 ];
 
-function formatDate(value: Date | null): string {
+function formatDate(
+  value: Date | null,
+  timeZone = 'America/Sao_Paulo',
+): string {
   if (!value) {
     return '';
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
+    timeZone,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   }).format(value);
+}
+
+// due_date é uma coluna DATE: chega como meia-noite UTC e voltaria um dia se
+// formatada no fuso de São Paulo.
+function formatDateOnly(value: Date | null): string {
+  return formatDate(value, 'UTC');
 }
 
 function withholdingAmount(row: PayableExportRow, kind: string): string {
@@ -70,7 +79,7 @@ function toLine(row: PayableExportRow): string {
     row.supplierName,
     row.supplierCnpj,
     row.documentNumber ?? '',
-    formatDate(row.dueDate),
+    formatDateOnly(row.dueDate),
     formatDate(row.paidAt),
     row.costCenterName,
     row.costCenterCode ?? '',

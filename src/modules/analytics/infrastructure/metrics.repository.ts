@@ -338,6 +338,7 @@ export class MetricsRepository implements IMetricsRepository {
         AND p.status = 'PAID'
         AND p.paid_at >= ${window.from}
         AND p.paid_at <= ${window.to}
+        AND ca.kind IN ('REVENUE', 'COST', 'EXPENSE')
       GROUP BY ca.id, ca.code, ca.name, ca.kind
       ORDER BY ca.code
     `;
