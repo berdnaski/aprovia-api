@@ -30,6 +30,8 @@ import { ValidationError } from 'src/shared/domain/errors/domain.error';
 import { Response } from 'express';
 import { BudgetEntryEntity } from '../domain/budget-entry.entity';
 import { FindBudgetByIdUseCase } from '../application/find-budget-by-id.use-case';
+import { GetBudgetConsumptionUseCase } from '../application/get-budget-consumption.use-case';
+import { BudgetConsumptionResponseDto } from '../dto/budget-consumption-response.dto';
 import { GetBudgetDocumentDownloadUrlUseCase } from '../application/get-budget-document-download-url.use-case';
 import { ListBudgetDocumentsUseCase } from '../application/list-budget-documents.use-case';
 import { ListBudgetEntriesUseCase } from '../application/list-budget-entries.use-case';
@@ -59,7 +61,32 @@ export class BudgetsController {
     private readonly uploadBudgetDocumentUseCase: UploadBudgetDocumentUseCase,
     private readonly listBudgetDocumentsUseCase: ListBudgetDocumentsUseCase,
     private readonly getBudgetDocumentDownloadUrlUseCase: GetBudgetDocumentDownloadUrlUseCase,
+    private readonly getBudgetConsumptionUseCase: GetBudgetConsumptionUseCase,
   ) {}
+
+  @Get(':id/consumption')
+  @Roles(
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
+  )
+  @ApiOperation({
+    summary: 'Orçado, comprometido e realizado de um período',
+    description:
+      'Realizado é o que foi efetivamente pago no período, somado pelo rateio das contas a pagar.',
+  })
+  @ApiResponse({ status: 200, type: BudgetConsumptionResponseDto })
+  async consumption(
+    @CurrentCompany() companyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<BudgetConsumptionResponseDto> {
+    const balance = await this.getBudgetConsumptionUseCase.executeForBudget(
+      id,
+      companyId,
+    );
+
+    return BudgetConsumptionResponseDto.fromBalance(balance);
+  }
 
   @Get(':id')
   @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
