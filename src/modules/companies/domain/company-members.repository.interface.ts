@@ -83,6 +83,11 @@ export abstract class ICompanyMemberRepository {
     managerId: string | null,
   ): Promise<CompanyMemberEntity>;
 
+  abstract updateDefaultCostCenter(
+    id: string,
+    costCenterId: string | null,
+  ): Promise<CompanyMemberEntity>;
+
   abstract updateSubstitute(
     id: string,
     data: SubstituteData,

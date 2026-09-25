@@ -14,6 +14,7 @@ import { GetMemberResponsibilitiesUseCase } from '../application/get-member-resp
 import { LookupCompanyCnpjUseCase } from '../application/lookup-company-cnpj.use-case';
 import { ManageOnboardingUseCase } from '../application/manage-onboarding.use-case';
 import { ListCompanyMembersUseCase } from '../application/list-company-members.use-case';
+import { SetMemberDefaultCostCenterUseCase } from '../application/set-member-default-cost-center.use-case';
 import { SetMemberManagerUseCase } from '../application/set-member-manager.use-case';
 import { SetMemberSubstituteUseCase } from '../application/set-member-substitute.use-case';
 import { UpdateCompanyPolicyUseCase } from '../application/update-company-policy.use-case';
@@ -61,6 +62,7 @@ import { OnboardingController } from './onboarding.controller';
     UpdateMemberRoleUseCase,
     UpdateMemberLimitUseCase,
     SetMemberManagerUseCase,
+    SetMemberDefaultCostCenterUseCase,
     SetMemberSubstituteUseCase,
     DisableMemberUseCase,
     GetMemberResponsibilitiesUseCase,

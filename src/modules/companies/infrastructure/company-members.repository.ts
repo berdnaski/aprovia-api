@@ -208,6 +208,18 @@ export class CompanyMemberRepository implements ICompanyMemberRepository {
     return CompanyMemberMapper.toDomain(raw);
   }
 
+  async updateDefaultCostCenter(
+    id: string,
+    costCenterId: string | null,
+  ): Promise<CompanyMemberEntity> {
+    const raw = await this.prisma.companyMember.update({
+      where: { id },
+      data: { default_cost_center_id: costCenterId },
+    });
+
+    return CompanyMemberMapper.toDomain(raw);
+  }
+
   async updateSubstitute(
     id: string,
     data: SubstituteData,

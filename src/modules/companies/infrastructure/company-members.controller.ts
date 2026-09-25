@@ -24,12 +24,14 @@ import { DisableMemberUseCase } from '../application/disable-member.use-case';
 import { FindMemberByIdUseCase } from '../application/find-member-by-id.use-case';
 import { GetMemberResponsibilitiesUseCase } from '../application/get-member-responsibilities.use-case';
 import { ListCompanyMembersUseCase } from '../application/list-company-members.use-case';
+import { SetMemberDefaultCostCenterUseCase } from '../application/set-member-default-cost-center.use-case';
 import { SetMemberManagerUseCase } from '../application/set-member-manager.use-case';
 import { SetMemberSubstituteUseCase } from '../application/set-member-substitute.use-case';
 import { UpdateMemberLimitUseCase } from '../application/update-member-limit.use-case';
 import { UpdateMemberRoleUseCase } from '../application/update-member-role.use-case';
 import { CompanyMemberResponseDto } from '../dto/company-member-response.dto';
 import { MemberResponsibilitiesResponseDto } from '../dto/member-responsibilities-response.dto';
+import { SetMemberDefaultCostCenterDto } from '../dto/set-member-default-cost-center.dto';
 import { SetMemberManagerDto } from '../dto/set-member-manager.dto';
 import { SetMemberSubstituteDto } from '../dto/set-member-substitute.dto';
 import { UpdateMemberLimitDto } from '../dto/update-member-limit.dto';
@@ -45,6 +47,7 @@ export class CompanyMembersController {
     private readonly updateMemberRoleUseCase: UpdateMemberRoleUseCase,
     private readonly updateMemberLimitUseCase: UpdateMemberLimitUseCase,
     private readonly setMemberManagerUseCase: SetMemberManagerUseCase,
+    private readonly setMemberDefaultCostCenterUseCase: SetMemberDefaultCostCenterUseCase,
     private readonly setMemberSubstituteUseCase: SetMemberSubstituteUseCase,
     private readonly disableMemberUseCase: DisableMemberUseCase,
     private readonly getMemberResponsibilitiesUseCase: GetMemberResponsibilitiesUseCase,
@@ -142,7 +145,7 @@ export class CompanyMembersController {
   @ApiOperation({
     summary: 'Definir líder direto',
     description:
-      'Forma a árvore de hierarquia percorrida pela cascata de aprovação (RN24). Ciclos são rejeitados.',
+      'Não muda quem aprova: só serve para escalonar um pedido parado tempo demais (SLA). Ciclos são rejeitados.',
   })
   @ApiResponse({ status: 200, type: CompanyMemberResponseDto })
   @ApiResponse({ status: 400, description: 'Ciclo na hierarquia' })
@@ -155,6 +158,27 @@ export class CompanyMembersController {
       id,
       companyId,
       dto.managerId ?? null,
+    );
+    return CompanyMemberResponseDto.fromEntity(member);
+  }
+
+  @Patch(':id/default-cost-center')
+  @Roles(CompanyMemberRole.FINANCE_ADMIN)
+  @ApiOperation({
+    summary: 'Definir o Centro de Custo preferido desta pessoa',
+    description:
+      'Entre quem tem alçada suficiente, o roteamento prefere quem tem este Centro de Custo como padrão (RN27). Não afeta quem pode abrir pedidos — isso é o vínculo de membros do Centro de Custo.',
+  })
+  @ApiResponse({ status: 200, type: CompanyMemberResponseDto })
+  async setDefaultCostCenter(
+    @CurrentCompany() companyId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetMemberDefaultCostCenterDto,
+  ): Promise<CompanyMemberResponseDto> {
+    const member = await this.setMemberDefaultCostCenterUseCase.execute(
+      id,
+      companyId,
+      dto.costCenterId ?? null,
     );
     return CompanyMemberResponseDto.fromEntity(member);
   }
