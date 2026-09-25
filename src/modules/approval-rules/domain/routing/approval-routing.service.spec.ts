@@ -1,362 +1,389 @@
-import { ApproverType } from 'generated/prisma/enums';
+import { CompanyMemberRole } from 'generated/prisma/enums';
 import { ApprovalRoutingService } from './approval-routing.service';
 import {
   NoEligibleApproverError,
   NoMatchingRuleError,
-  RoutingCycleError,
+  NoSecondApproverError,
 } from './routing.errors';
 import { RoutingInput, RoutingMember, RoutingRule } from './routing.types';
 
-const member = (
+const CC = 'cc-tecnologia';
+const OUTRO_CC = 'cc-marketing';
+
+function member(
   id: string,
-  limitCents: bigint,
-  managerId: string | null = null,
-  extra: Partial<RoutingMember> = {},
-): RoutingMember => ({
-  id,
-  approvalLimitCents: limitCents,
-  managerId,
-  absentFrom: null,
-  absentUntil: null,
-  substituteId: null,
-  ...extra,
-});
+  overrides: Partial<RoutingMember> = {},
+): RoutingMember {
+  return {
+    id,
+    role: CompanyMemberRole.APPROVER,
+    approvalLimitCents: 0n,
+    costCenterId: CC,
+    absentFrom: null,
+    absentUntil: null,
+    substituteId: null,
+    disabled: false,
+    ...overrides,
+  };
+}
 
-const CFO = member('cfo', 50_000_000n, null);
-const DIRETOR = member('diretor', 5_000_000n, 'cfo');
-const GERENTE = member('gerente', 1_000_000n, 'diretor');
-const ANALISTA = member('analista', 0n, 'gerente');
-const ADMIN = member('admin-fin', 0n, null);
+function rule(overrides: Partial<RoutingRule> = {}): RoutingRule {
+  return {
+    id: 'faixa-global',
+    costCenterId: null,
+    categoryId: null,
+    minAmountCents: 0n,
+    maxAmountCents: null,
+    requiresDualApproval: false,
+    isActive: true,
+    ...overrides,
+  };
+}
 
-const HIERARCHY = [ANALISTA, GERENTE, DIRETOR, CFO];
-
-const globalRule = (overrides: Partial<RoutingRule> = {}): RoutingRule => ({
-  id: 'rule-global',
-  costCenterId: null,
-  categoryId: null,
-  minAmountCents: 0n,
-  maxAmountCents: null,
-  approverType: ApproverType.COST_CENTER_MANAGER,
-  requiresDualApproval: false,
-  isActive: true,
-  ...overrides,
-});
-
-const input = (overrides: Partial<RoutingInput> = {}): RoutingInput => ({
-  amountCents: 500_000n,
-  requester: ANALISTA,
-  costCenter: { id: 'cc-1', managerId: 'gerente' },
-  categoryId: null,
-  hierarchy: HIERARCHY,
-  rules: [globalRule()],
-  dualApprovalThresholdCents: null,
-  financeAdmins: [ADMIN],
-  at: new Date('2026-03-10T12:00:00Z'),
-  ...overrides,
-});
+function input(overrides: Partial<RoutingInput> = {}): RoutingInput {
+  return {
+    amountCents: 100_000n,
+    requester: member('pedro', { role: CompanyMemberRole.REQUESTER }),
+    costCenter: { id: CC },
+    categoryId: null,
+    members: [],
+    rules: [rule()],
+    dualApprovalThresholdCents: null,
+    at: new Date('2026-09-24T12:00:00Z'),
+    ...overrides,
+  };
+}
 
 describe('ApprovalRoutingService', () => {
-  const service = new ApprovalRoutingService();
-  const approvers = (result: { steps: { expectedApproverId: string }[] }) =>
-    result.steps.map((step) => step.expectedApproverId);
+  const routing = new ApprovalRoutingService();
 
-  describe('5.2 — seleção de regra por especificidade', () => {
-    it('RF35: regra do Centro de Custo vence a global no mesmo valor', () => {
-      const specific = globalRule({
-        id: 'rule-cc',
-        costCenterId: 'cc-1',
-        approverType: ApproverType.DIRECT_MANAGER,
-      });
-
-      const result = service.route(input({ rules: [globalRule(), specific] }));
-
-      expect(result.ruleId).toBe('rule-cc');
-    });
-
-    it('RF35: CC + categoria vence apenas CC', () => {
-      const byCostCenter = globalRule({ id: 'r-cc', costCenterId: 'cc-1' });
-      const byBoth = globalRule({
-        id: 'r-both',
-        costCenterId: 'cc-1',
-        categoryId: 'cat-1',
-      });
-
-      const result = service.route(
-        input({ categoryId: 'cat-1', rules: [byCostCenter, byBoth] }),
-      );
-
-      expect(result.ruleId).toBe('r-both');
-    });
-
-    it('faixa sem teto cobre qualquer valor acima do piso', () => {
-      const result = service.route(
+  describe('seleção da faixa', () => {
+    it('faixa do centro de custo vence a global no mesmo valor', () => {
+      const result = routing.route(
         input({
-          amountCents: 99_000_000n,
-          rules: [globalRule({ minAmountCents: 0n, maxAmountCents: null })],
+          members: [member('erick', { approvalLimitCents: 500_000n })],
+          rules: [
+            rule({ id: 'global' }),
+            rule({ id: 'do-centro', costCenterId: CC }),
+          ],
         }),
       );
 
-      expect(result.ruleId).toBe('rule-global');
+      expect(result.ruleId).toBe('do-centro');
     });
 
-    it('valor fora de todas as faixas lança erro explícito, não silêncio', () => {
+    it('centro mais categoria vence só centro', () => {
+      const result = routing.route(
+        input({
+          categoryId: 'software',
+          members: [member('erick', { approvalLimitCents: 500_000n })],
+          rules: [
+            rule({ id: 'do-centro', costCenterId: CC }),
+            rule({
+              id: 'centro-e-categoria',
+              costCenterId: CC,
+              categoryId: 'software',
+            }),
+          ],
+        }),
+      );
+
+      expect(result.ruleId).toBe('centro-e-categoria');
+    });
+
+    it('valor fora de todas as faixas para o pedido com erro claro', () => {
       expect(() =>
-        service.route(
+        routing.route(
           input({
-            amountCents: 900n,
-            rules: [globalRule({ minAmountCents: 1000n })],
+            amountCents: 900_000n,
+            members: [member('erick', { approvalLimitCents: 900_000n })],
+            rules: [rule({ maxAmountCents: 100_000n })],
           }),
         ),
       ).toThrow(NoMatchingRuleError);
     });
 
-    it('regra inativa é ignorada na seleção', () => {
-      expect(() =>
-        service.route(input({ rules: [globalRule({ isActive: false })] })),
-      ).toThrow(NoMatchingRuleError);
-    });
-  });
-
-  describe('5.3 — RN23: ninguém aprova o próprio pedido', () => {
-    it('solicitante comum segue a rota normal', () => {
-      expect(approvers(service.route(input()))).toEqual(['gerente']);
-    });
-
-    it('RN23: solicitante é o gestor do CC → pula ele e sobe', () => {
-      const result = service.route(
-        input({ requester: GERENTE, amountCents: 500_000n }),
-      );
-
-      expect(approvers(result)).toEqual(['diretor']);
-      expect(approvers(result)).not.toContain('gerente');
-    });
-
-    it('RN23: solicitante nunca aparece como aprovador em cascata longa', () => {
-      const result = service.route(
-        input({ requester: DIRETOR, amountCents: 30_000_000n }),
-      );
-
-      expect(approvers(result)).not.toContain('diretor');
-    });
-
-    it('RN23: solicitante sem superior cai no fallback da RN27', () => {
-      const solo = member('solo', 90_000_000n, null);
-
-      const result = service.route(
+    it('faixa inativa é ignorada', () => {
+      const result = routing.route(
         input({
-          requester: solo,
-          costCenter: { id: 'cc-1', managerId: 'solo' },
-          hierarchy: [solo],
+          members: [member('erick', { approvalLimitCents: 500_000n })],
+          rules: [
+            rule({ id: 'desligada', costCenterId: CC, isActive: false }),
+            rule({ id: 'global' }),
+          ],
         }),
       );
 
-      expect(approvers(result)).toEqual(['admin-fin']);
+      expect(result.ruleId).toBe('global');
     });
   });
 
-  describe('5.4 — RN24: cascata hierárquica', () => {
-    it('valor abaixo da alçada do gestor gera 1 etapa', () => {
-      const result = service.route(input({ amountCents: 500_000n }));
+  describe('quem aprova sai da alçada, não do organograma', () => {
+    it('escolhe a menor alçada que cobre o valor', () => {
+      const result = routing.route(
+        input({
+          amountCents: 100_000n,
+          members: [
+            member('folgado', { approvalLimitCents: 900_000n }),
+            member('justo', { approvalLimitCents: 150_000n }),
+            member('curto', { approvalLimitCents: 50_000n }),
+          ],
+        }),
+      );
 
       expect(result.steps).toHaveLength(1);
-      expect(approvers(result)).toEqual(['gerente']);
+      expect(result.steps[0].expectedApproverId).toBe('justo');
     });
 
-    it('RN24: transborda quando o valor excede a alçada do gestor', () => {
-      const result = service.route(input({ amountCents: 3_000_000n }));
-
-      expect(approvers(result)).toEqual(['gerente', 'diretor']);
-    });
-
-    it('RN24: sobe em cadeia até cobrir o valor integral (3 níveis)', () => {
-      const result = service.route(input({ amountCents: 30_000_000n }));
-
-      expect(approvers(result)).toEqual(['gerente', 'diretor', 'cfo']);
-      expect(result.steps.map((s) => s.stepOrder)).toEqual([1, 2, 3]);
-    });
-
-    it('alçada é comparada com o valor integral, não com o saldo', () => {
-      const result = service.route(input({ amountCents: 1_000_000n }));
-
-      expect(approvers(result)).toEqual(['gerente']);
-    });
-
-    it('RN24: ciclo na hierarquia lança erro explícito, não laço infinito', () => {
-      const a = member('a', 1n, 'b');
-      const b = member('b', 1n, 'c');
-      const c = member('c', 1n, 'a');
-
-      const started = Date.now();
-
-      expect(() =>
-        service.route(
-          input({
-            amountCents: 9_000_000n,
-            costCenter: { id: 'cc-1', managerId: 'a' },
-            hierarchy: [a, b, c],
-          }),
-        ),
-      ).toThrow(RoutingCycleError);
-
-      expect(Date.now() - started).toBeLessThan(100);
-    });
-  });
-
-  describe('5.5 — RN26: dupla aprovação', () => {
-    it('RN26: valor acima do limiar marca requiresDualApproval', () => {
-      const result = service.route(
+    it('acima da alçada de todos, cai no Admin Financeiro', () => {
+      const result = routing.route(
         input({
-          amountCents: 30_000_000n,
-          dualApprovalThresholdCents: 10_000_000n,
+          amountCents: 650_000n,
+          members: [
+            member('aprovador', { approvalLimitCents: 100_000n }),
+            member('leonardo', { role: CompanyMemberRole.FINANCE_ADMIN }),
+          ],
         }),
       );
 
-      expect(result.steps.every((step) => step.requiresDualApproval)).toBe(
+      expect(result.steps[0].expectedApproverId).toBe('leonardo');
+    });
+
+    it('Admin Financeiro não tem teto, mesmo com limite zerado no cadastro', () => {
+      const result = routing.route(
+        input({
+          amountCents: 10_000_000n,
+          members: [
+            member('leonardo', {
+              role: CompanyMemberRole.FINANCE_ADMIN,
+              approvalLimitCents: 0n,
+            }),
+          ],
+        }),
+      );
+
+      expect(result.steps[0].expectedApproverId).toBe('leonardo');
+    });
+
+    it('prefere quem responde pelo centro de custo do pedido', () => {
+      const result = routing.route(
+        input({
+          members: [
+            member('de-fora', {
+              approvalLimitCents: 150_000n,
+              costCenterId: OUTRO_CC,
+            }),
+            member('do-centro', {
+              approvalLimitCents: 150_000n,
+              costCenterId: CC,
+            }),
+          ],
+        }),
+      );
+
+      expect(result.steps[0].expectedApproverId).toBe('do-centro');
+    });
+
+    it('ninguém aprova o próprio pedido', () => {
+      const result = routing.route(
+        input({
+          requester: member('erick', { approvalLimitCents: 900_000n }),
+          members: [
+            member('erick', { approvalLimitCents: 900_000n }),
+            member('rita', { approvalLimitCents: 900_000n }),
+          ],
+        }),
+      );
+
+      expect(result.steps[0].expectedApproverId).toBe('rita');
+    });
+
+    it('Admin Financeiro que pede sozinho recebe erro explicativo, não silêncio', () => {
+      const leonardo = member('leonardo', {
+        role: CompanyMemberRole.FINANCE_ADMIN,
+      });
+
+      expect(() =>
+        routing.route(input({ requester: leonardo, members: [leonardo] })),
+      ).toThrow(NoEligibleApproverError);
+    });
+
+    it('membro desativado não entra na rota', () => {
+      expect(() =>
+        routing.route(
+          input({
+            members: [
+              member('afastado', {
+                approvalLimitCents: 900_000n,
+                disabled: true,
+              }),
+            ],
+          }),
+        ),
+      ).toThrow(NoEligibleApproverError);
+    });
+
+    it('Solicitante nunca é escolhido como aprovador', () => {
+      expect(() =>
+        routing.route(
+          input({
+            members: [
+              member('outro-solicitante', {
+                role: CompanyMemberRole.REQUESTER,
+                approvalLimitCents: 900_000n,
+              }),
+            ],
+          }),
+        ),
+      ).toThrow(NoEligibleApproverError);
+    });
+  });
+
+  describe('duas assinaturas viram duas etapas', () => {
+    it('faixa com dupla assinatura gera duas etapas, com pessoas diferentes', () => {
+      const result = routing.route(
+        input({
+          members: [
+            member('aprovador', { approvalLimitCents: 900_000n }),
+            member('leonardo', { role: CompanyMemberRole.FINANCE_ADMIN }),
+          ],
+          rules: [rule({ requiresDualApproval: true })],
+        }),
+      );
+
+      expect(result.steps).toHaveLength(2);
+      expect(result.steps[0].expectedApproverId).toBe('aprovador');
+      expect(result.steps[1].expectedApproverId).toBe('leonardo');
+      expect(result.steps.map((step) => step.stepOrder)).toEqual([1, 2]);
+    });
+
+    it('cada etapa fecha com uma assinatura, para não travar o pedido', () => {
+      const result = routing.route(
+        input({
+          members: [
+            member('aprovador', { approvalLimitCents: 900_000n }),
+            member('leonardo', { role: CompanyMemberRole.FINANCE_ADMIN }),
+          ],
+          rules: [rule({ requiresDualApproval: true })],
+        }),
+      );
+
+      expect(result.steps.every((step) => !step.requiresDualApproval)).toBe(
         true,
       );
     });
 
-    it('RN26: limiar nulo nunca exige dupla assinatura', () => {
-      const result = service.route(
-        input({ amountCents: 30_000_000n, dualApprovalThresholdCents: null }),
-      );
-
-      expect(result.steps.some((step) => step.requiresDualApproval)).toBe(
-        false,
-      );
-    });
-
-    it('valor exatamente no limiar já exige dupla', () => {
-      const result = service.route(
+    it('limiar da empresa também exige a segunda assinatura', () => {
+      const result = routing.route(
         input({
-          amountCents: 10_000_000n,
-          dualApprovalThresholdCents: 10_000_000n,
+          amountCents: 100_000n,
+          dualApprovalThresholdCents: 100_000n,
+          members: [
+            member('aprovador', { approvalLimitCents: 900_000n }),
+            member('leonardo', { role: CompanyMemberRole.FINANCE_ADMIN }),
+          ],
         }),
       );
 
-      expect(result.steps[0].requiresDualApproval).toBe(true);
+      expect(result.steps).toHaveLength(2);
     });
 
-    it('RN22: requiresDualApproval vem da regra vigente', () => {
-      const result = service.route(
-        input({ rules: [globalRule({ requiresDualApproval: true })] }),
+    it('sem limiar, uma assinatura basta', () => {
+      const result = routing.route(
+        input({
+          dualApprovalThresholdCents: null,
+          members: [
+            member('aprovador', { approvalLimitCents: 900_000n }),
+            member('leonardo', { role: CompanyMemberRole.FINANCE_ADMIN }),
+          ],
+        }),
       );
 
-      expect(result.steps[0].requiresDualApproval).toBe(true);
+      expect(result.steps).toHaveLength(1);
+    });
+
+    it('sem uma segunda pessoa elegível, avisa em vez de deixar o pedido preso', () => {
+      expect(() =>
+        routing.route(
+          input({
+            members: [member('unico', { approvalLimitCents: 900_000n })],
+            rules: [rule({ requiresDualApproval: true })],
+          }),
+        ),
+      ).toThrow(NoSecondApproverError);
     });
   });
 
-  describe('5.6 — RN27: fallback e RN29/RN30: substituto', () => {
-    it('RN27: cadeia esgotada sem alçada suficiente vai ao Admin Financeiro', () => {
-      const result = service.route(input({ amountCents: 90_000_000n }));
-
-      expect(approvers(result)).toEqual([
-        'gerente',
-        'diretor',
-        'cfo',
-        'admin-fin',
-      ]);
-    });
-
-    it('RN27: sem Admin Financeiro disponível lança erro explícito', () => {
-      expect(() =>
-        service.route(input({ amountCents: 90_000_000n, financeAdmins: [] })),
-      ).toThrow(NoEligibleApproverError);
-    });
-
-    it('RN29: aprovador ausente na data → etapa vai ao substituto', () => {
-      const ausente = member('gerente', 1_000_000n, 'diretor', {
-        absentFrom: new Date('2026-03-01T00:00:00Z'),
-        absentUntil: new Date('2026-03-20T00:00:00Z'),
-        substituteId: 'carlos',
-      });
-
-      const result = service.route(
-        input({ hierarchy: [ANALISTA, ausente, DIRETOR, CFO] }),
-      );
-
-      expect(result.steps[0].expectedApproverId).toBe('carlos');
-      expect(result.steps[0].onBehalfOfId).toBe('gerente');
-    });
-
-    it('RN29: ausência é avaliada contra a data de submissão, não contra hoje', () => {
-      const ausente = member('gerente', 1_000_000n, 'diretor', {
-        absentFrom: new Date('2026-03-01T00:00:00Z'),
-        absentUntil: new Date('2026-03-05T00:00:00Z'),
-        substituteId: 'carlos',
-      });
-
-      const result = service.route(
+  describe('ausência e substituto', () => {
+    it('aprovador ausente na data manda a etapa para o substituto, em seu nome', () => {
+      const result = routing.route(
         input({
-          hierarchy: [ANALISTA, ausente, DIRETOR, CFO],
-          at: new Date('2026-03-10T12:00:00Z'),
+          at: new Date('2026-09-24T12:00:00Z'),
+          members: [
+            member('titular', {
+              approvalLimitCents: 900_000n,
+              absentFrom: new Date('2026-09-20T00:00:00Z'),
+              absentUntil: new Date('2026-09-30T00:00:00Z'),
+              substituteId: 'substituto',
+            }),
+            member('substituto', { approvalLimitCents: 0n }),
+          ],
         }),
       );
 
-      expect(result.steps[0].expectedApproverId).toBe('gerente');
+      expect(result.steps[0].expectedApproverId).toBe('substituto');
+      expect(result.steps[0].onBehalfOfId).toBe('titular');
+    });
+
+    it('fora do período de ausência, a etapa fica com o titular', () => {
+      const result = routing.route(
+        input({
+          at: new Date('2026-10-15T12:00:00Z'),
+          members: [
+            member('titular', {
+              approvalLimitCents: 900_000n,
+              absentFrom: new Date('2026-09-20T00:00:00Z'),
+              absentUntil: new Date('2026-09-30T00:00:00Z'),
+              substituteId: 'substituto',
+            }),
+            member('substituto', { approvalLimitCents: 0n }),
+          ],
+        }),
+      );
+
+      expect(result.steps[0].expectedApproverId).toBe('titular');
       expect(result.steps[0].onBehalfOfId).toBeNull();
     });
 
-    it('RN30: substituto do substituto nunca é acionado', () => {
-      const ausente = member('gerente', 1_000_000n, 'diretor', {
-        absentFrom: new Date('2026-03-01T00:00:00Z'),
-        absentUntil: new Date('2026-03-20T00:00:00Z'),
-        substituteId: 'carlos',
-      });
-      const carlosAusente = member('carlos', 0n, null, {
-        absentFrom: new Date('2026-03-01T00:00:00Z'),
-        absentUntil: new Date('2026-03-20T00:00:00Z'),
-        substituteId: 'ana',
-      });
-
-      const result = service.route(
+    it('substituto que é quem pediu não recebe a etapa', () => {
+      const result = routing.route(
         input({
-          hierarchy: [ANALISTA, ausente, DIRETOR, CFO, carlosAusente],
+          requester: member('pedro', { role: CompanyMemberRole.REQUESTER }),
+          members: [
+            member('titular', {
+              approvalLimitCents: 900_000n,
+              absentFrom: new Date('2026-09-20T00:00:00Z'),
+              absentUntil: new Date('2026-09-30T00:00:00Z'),
+              substituteId: 'pedro',
+            }),
+          ],
         }),
       );
 
-      expect(result.steps[0].expectedApproverId).toBe('carlos');
-      expect(approvers(result)).not.toContain('ana');
-    });
-
-    it('RN30: substituto que é o solicitante não recebe a etapa', () => {
-      const ausente = member('gerente', 1_000_000n, 'diretor', {
-        absentFrom: new Date('2026-03-01T00:00:00Z'),
-        absentUntil: new Date('2026-03-20T00:00:00Z'),
-        substituteId: 'analista',
-      });
-
-      const result = service.route(
-        input({ hierarchy: [ANALISTA, ausente, DIRETOR, CFO] }),
-      );
-
-      expect(result.steps[0].expectedApproverId).toBe('gerente');
-      expect(approvers(result)).not.toContain('analista');
+      expect(result.steps[0].expectedApproverId).toBe('titular');
     });
   });
 
-  describe('5.1 — contrato do motor', () => {
-    it('stepOrder é sequencial a partir de 1', () => {
-      const result = service.route(input({ amountCents: 30_000_000n }));
+  describe('contrato do motor', () => {
+    it('a rota é determinística: mesma entrada, mesma saída', () => {
+      const entrada = input({
+        members: [
+          member('a', { approvalLimitCents: 150_000n }),
+          member('b', { approvalLimitCents: 150_000n }),
+        ],
+      });
 
-      expect(result.steps.map((step) => step.stepOrder)).toEqual([1, 2, 3]);
-    });
-
-    it('DIRECT_MANAGER começa pelo líder do solicitante, não pelo gestor do CC', () => {
-      const result = service.route(
-        input({
-          rules: [globalRule({ approverType: ApproverType.DIRECT_MANAGER })],
-          costCenter: { id: 'cc-1', managerId: 'cfo' },
-        }),
-      );
-
-      expect(result.steps[0].expectedApproverId).toBe('gerente');
-    });
-
-    it('é determinístico: mesma entrada, mesma rota', () => {
-      const payload = input({ amountCents: 30_000_000n });
-
-      expect(service.route(payload)).toEqual(service.route(payload));
+      expect(routing.route(entrada)).toEqual(routing.route(entrada));
     });
   });
 });

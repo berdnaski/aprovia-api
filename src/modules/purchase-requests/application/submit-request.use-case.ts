@@ -108,6 +108,12 @@ export class SubmitRequestUseCase {
       }
     }
 
+    if (!request.costCenterId) {
+      throw new ValidationError(
+        'Escolha o Centro de Custo antes de enviar: é ele que define o orçamento e quem aprova.',
+      );
+    }
+
     const company = await this.findCompanyByIdUseCase.execute(actor.companyId);
     const submittedAt = new Date();
 

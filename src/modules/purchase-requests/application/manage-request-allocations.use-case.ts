@@ -110,6 +110,10 @@ export class ManageRequestAllocationsUseCase {
       };
     }
 
+    if (!request.costCenterId) {
+      return { custom: false, shares: [] };
+    }
+
     const category = request.categoryId
       ? await this.findCategoryByIdUseCase.execute(
           request.categoryId,
@@ -159,6 +163,12 @@ export class ManageRequestAllocationsUseCase {
       if (!editsDraft && !sameSplit(current.lines, lines)) {
         throw new AllocationLockedError(request.number);
       }
+    }
+
+    if (!request.costCenterId) {
+      throw new ValidationError(
+        'Escolha o Centro de Custo do pedido antes de dividir o valor entre áreas.',
+      );
     }
 
     assertValidAllocation(lines, request.costCenterId);

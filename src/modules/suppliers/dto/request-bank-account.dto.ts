@@ -7,6 +7,7 @@ import {
   IsString,
   Length,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 export class RequestBankAccountDto {
@@ -17,11 +18,13 @@ export class RequestBankAccountDto {
 
   @ApiProperty({ example: '1234' })
   @IsString()
+  @MinLength(1)
   @MaxLength(20)
   branch: string;
 
   @ApiProperty({ example: '00012345' })
   @IsString()
+  @MinLength(1)
   @MaxLength(20)
   accountNumber: string;
 
@@ -37,6 +40,7 @@ export class RequestBankAccountDto {
 
   @ApiProperty({ example: 'Acme Indústria LTDA', maxLength: 180 })
   @IsString()
+  @MinLength(3)
   @MaxLength(180)
   holderName: string;
 

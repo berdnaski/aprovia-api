@@ -1339,6 +1339,8 @@ type MemberRow = {
   absent_from: Date | null;
   absent_until: Date | null;
   substitute_id: string | null;
+  default_cost_center_id: string | null;
+  disabled_at: Date | null;
   name: string;
 };
 
@@ -1524,25 +1526,16 @@ async function main(): Promise<void> {
     );
   }
 
-  const hierarchy = memberRows.map((row) => ({
+  const routingMembers = memberRows.map((row) => ({
     id: row.id,
+    role: row.role,
     approvalLimitCents: row.approval_limit_cents,
-    managerId: row.manager_id,
+    costCenterId: row.default_cost_center_id,
     absentFrom: row.absent_from,
     absentUntil: row.absent_until,
     substituteId: row.substitute_id,
+    disabled: row.disabled_at !== null,
   }));
-
-  const financeAdmins = memberRows
-    .filter((row) => row.role === CompanyMemberRole.FINANCE_ADMIN)
-    .map((row) => ({
-      id: row.id,
-      approvalLimitCents: row.approval_limit_cents,
-      managerId: row.manager_id,
-      absentFrom: row.absent_from,
-      absentUntil: row.absent_until,
-      substituteId: row.substitute_id,
-    }));
 
   function routeFor(input: {
     amountCents: bigint;
@@ -1558,27 +1551,27 @@ async function main(): Promise<void> {
       amountCents: input.amountCents,
       requester: {
         id: requesterRow.id,
+        role: requesterRow.role,
         approvalLimitCents: requesterRow.approval_limit_cents,
-        managerId: requesterRow.manager_id,
+        costCenterId: requesterRow.default_cost_center_id,
         absentFrom: requesterRow.absent_from,
         absentUntil: requesterRow.absent_until,
         substituteId: requesterRow.substitute_id,
+        disabled: requesterRow.disabled_at !== null,
       },
-      costCenter: { id: costCenter.id, managerId: costCenter.manager_id },
+      costCenter: { id: costCenter.id },
       categoryId: input.categoryId,
-      hierarchy,
+      members: routingMembers,
       rules: ruleRows.map((rule) => ({
         id: rule.id,
         costCenterId: rule.cost_center_id,
         categoryId: rule.category_id,
         minAmountCents: rule.min_amount_cents,
         maxAmountCents: rule.max_amount_cents,
-        approverType: rule.approver_type,
         requiresDualApproval: rule.requires_dual_approval,
         isActive: rule.is_active,
       })),
       dualApprovalThresholdCents: company.dual_approval_threshold_cents,
-      financeAdmins,
       at: input.at,
     });
   }

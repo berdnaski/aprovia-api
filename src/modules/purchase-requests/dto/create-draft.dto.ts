@@ -10,9 +10,14 @@ import {
 import { Urgency } from 'generated/prisma/enums';
 
 export class CreateDraftDto {
-  @ApiProperty({ format: 'uuid', description: 'Obrigatório (RN13).' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Opcional no rascunho: a leitura assistida tenta identificar e quem pede confirma. Obrigatório na submissão (RN13).',
+  })
+  @IsOptional()
   @IsUUID()
-  costCenterId: string;
+  costCenterId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()

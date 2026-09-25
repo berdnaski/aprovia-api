@@ -225,12 +225,55 @@ export class PurchaseRequestRepository implements IPurchaseRequestRepository {
       this.prisma.purchaseRequest.count({ where }),
     ]);
 
+    const approverByRequestId = await this.currentApproverNames(
+      records
+        .filter((record) => record.status === 'PENDING')
+        .map((record) => record.id),
+    );
+
     return {
-      items: records.map(PurchaseRequestMapper.toDomain),
+      items: records.map((record) => {
+        const entity = PurchaseRequestMapper.toDomain(record);
+        entity.currentApproverName = approverByRequestId.get(record.id) ?? null;
+        return entity;
+      }),
       total,
       page: Math.floor(filter.skip / filter.take) + 1,
       perPage: filter.take,
     };
+  }
+
+  private async currentApproverNames(
+    requestIds: string[],
+  ): Promise<Map<string, string>> {
+    if (requestIds.length === 0) {
+      return new Map();
+    }
+
+    const steps = await this.prisma.approvalStep.findMany({
+      where: {
+        purchase_request_id: { in: requestIds },
+        status: StepStatus.WAITING,
+      },
+      orderBy: { step_order: 'asc' },
+      select: {
+        purchase_request_id: true,
+        expected_approver: { select: { user: { select: { name: true } } } },
+      },
+    });
+
+    const byRequestId = new Map<string, string>();
+
+    for (const step of steps) {
+      if (!byRequestId.has(step.purchase_request_id)) {
+        byRequestId.set(
+          step.purchase_request_id,
+          step.expected_approver.user.name,
+        );
+      }
+    }
+
+    return byRequestId;
   }
 
   async listManagedCostCenterIds(

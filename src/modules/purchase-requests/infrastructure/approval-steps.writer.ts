@@ -160,4 +160,33 @@ export class ApprovalStepWriter implements IApprovalStepWriter {
       data: { expected_approver_id: approverId },
     });
   }
+
+  async reassignWaitingOf(
+    companyId: string,
+    fromMemberId: string,
+    toMemberId: string,
+    context?: TransactionContext,
+  ): Promise<string[]> {
+    const client = prismaClient(this.prisma, context);
+
+    const waiting = await client.approvalStep.findMany({
+      where: {
+        expected_approver_id: fromMemberId,
+        status: { in: OPEN_STATUSES },
+        purchase_request: { company_id: companyId },
+      },
+      select: { id: true },
+    });
+
+    if (waiting.length === 0) {
+      return [];
+    }
+
+    await client.approvalStep.updateMany({
+      where: { id: { in: waiting.map((step) => step.id) } },
+      data: { expected_approver_id: toMemberId },
+    });
+
+    return waiting.map((step) => step.id);
+  }
 }

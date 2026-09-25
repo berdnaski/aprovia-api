@@ -8,7 +8,7 @@ export interface CreatePurchaseRequestData {
   companyId: string;
   number: string;
   requesterId: string;
-  costCenterId: string;
+  costCenterId: string | null;
   categoryId: string | null;
   supplierId: string | null;
   title: string;
@@ -18,7 +18,7 @@ export interface CreatePurchaseRequestData {
 }
 
 export interface UpdatePurchaseRequestData {
-  costCenterId?: string;
+  costCenterId?: string | null;
   categoryId?: string | null;
   supplierId?: string | null;
   title?: string;

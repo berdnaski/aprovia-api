@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuditEventType } from 'generated/prisma/enums';
+import { ApproverType, AuditEventType } from 'generated/prisma/enums';
 import { AuditEntity } from 'src/modules/audit/domain/audit-log.entity';
 import { IAuditLogRepository } from 'src/modules/audit/domain/audit-logs.repository.interface';
 import { ITransactionManager } from 'src/shared/domain/transaction.manager';
@@ -45,7 +45,7 @@ export class ReplaceApprovalMatrixUseCase {
     const ranges: ApprovalRuleRangeData[] = data.ranges.map((range) => ({
       minAmountCents: range.minAmountCents,
       maxAmountCents: range.maxAmountCents ?? null,
-      approverType: range.approverType,
+      approverType: range.approverType ?? ApproverType.COST_CENTER_MANAGER,
       requiresDualApproval: range.requiresDualApproval ?? false,
     }));
 

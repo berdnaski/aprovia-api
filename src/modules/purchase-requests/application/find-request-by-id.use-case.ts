@@ -91,7 +91,10 @@ export class FindRequestByIdUseCase {
         actor.companyId,
       );
 
-    if (managedCostCenterIds.includes(request.costCenterId)) {
+    if (
+      request.costCenterId &&
+      managedCostCenterIds.includes(request.costCenterId)
+    ) {
       return;
     }
 

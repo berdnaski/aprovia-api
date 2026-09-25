@@ -4,6 +4,7 @@ import {
   LlmUnavailableError,
 } from 'src/shared/domain/llm.client';
 import { ICategoryRepository } from 'src/modules/categories/domain/categories.repository.interface';
+import { ICostCenterRepository } from 'src/modules/cost-centers/domain/cost-centers.repository.interface';
 import { IStorageService } from 'src/shared/domain/storage.service';
 import { ExtractionStatus } from '../domain/extraction.service';
 import { IRequestFileRepository } from '../domain/request-files.repository.interface';
@@ -18,6 +19,7 @@ const completionOf = (content: string): LlmCompletionResult => ({
 const build = (
   complete: ILlmClient['complete'],
   categoryNames: string[] = [],
+  costCenterNames: string[] = [],
 ) => {
   const llmClient = { complete };
   const storageService = {} as IStorageService;
@@ -25,12 +27,16 @@ const build = (
   const categoryRepository = {
     list: () => Promise.resolve(categoryNames.map((name) => ({ name }))),
   } as unknown as ICategoryRepository;
+  const costCenterRepository = {
+    list: () => Promise.resolve(costCenterNames.map((name) => ({ name }))),
+  } as unknown as ICostCenterRepository;
 
   return new LlmExtractionService(
     llmClient,
     storageService,
     fileRepository,
     categoryRepository,
+    costCenterRepository,
   );
 };
 
@@ -183,5 +189,134 @@ describe('LlmExtractionService', () => {
     const result = await service.extract('company-1', { text: 'nota' });
 
     expect(result.retryable).toBe(false);
+  });
+
+  it('oferece os Centros de Custo da empresa para a leitura escolher', async () => {
+    let sent = '';
+
+    const service = build(
+      (request) => {
+        sent = request.messages[0].content;
+        return Promise.resolve(completionOf('{}'));
+      },
+      [],
+      ['Tecnologia', 'Marketing'],
+    );
+
+    await service.extract('company-1', { text: 'notebooks para o time de TI' });
+
+    expect(sent).toContain('Tecnologia, Marketing');
+  });
+
+  it('devolve o Centro de Custo que a leitura identificou', async () => {
+    const service = build(
+      () =>
+        Promise.resolve(
+          completionOf('{"title":"Notebooks","costCenterName":"Tecnologia"}'),
+        ),
+      [],
+      ['Tecnologia'],
+    );
+
+    const result = await service.extract('company-1', { text: 'notebooks' });
+
+    expect(result.fields?.costCenterName).toBe('Tecnologia');
+  });
+
+  it('valor em dólar não vira reais escondido: fica null e avisa', async () => {
+    const service = build(() =>
+      Promise.resolve(
+        completionOf(
+          '{"title":"10 licenças","totalAmountCents":null,"foreignCurrencyNote":"US$ 20,00 por licença"}',
+        ),
+      ),
+    );
+
+    const result = await service.extract('company-1', {
+      text: '10 licenças do Claude Code, US$ 20 cada',
+    });
+
+    expect(result.fields?.totalAmountCents).toBeNull();
+    expect(result.fields?.foreignCurrencyNote).toBe('US$ 20,00 por licença');
+  });
+
+  it('divide entre Centros de Custo quando o texto descreve a proporção', async () => {
+    const service = build(
+      () =>
+        Promise.resolve(
+          completionOf(
+            '{"title":"10 licenças","costCenterSplits":[{"costCenterName":"Tecnologia","percent":40},{"costCenterName":"Marketing","percent":60}]}',
+          ),
+        ),
+      [],
+      ['Tecnologia', 'Marketing'],
+    );
+
+    const result = await service.extract('company-1', {
+      text: '10 licenças, 4 para tecnologia e 6 para marketing',
+    });
+
+    expect(result.fields?.costCenterSplits).toEqual([
+      { costCenterName: 'Tecnologia', percent: 40 },
+      { costCenterName: 'Marketing', percent: 60 },
+    ]);
+  });
+
+  it('rateio com soma torta é corrigido, não descartado', async () => {
+    const service = build(() =>
+      Promise.resolve(
+        completionOf(
+          '{"costCenterSplits":[{"costCenterName":"Tecnologia","percent":33},{"costCenterName":"Marketing","percent":33},{"costCenterName":"Operações","percent":33}]}',
+        ),
+      ),
+    );
+
+    const result = await service.extract('company-1', { text: 'rateio' });
+    const total = result.fields?.costCenterSplits?.reduce(
+      (sum, split) => sum + split.percent,
+      0,
+    );
+
+    expect(total).toBe(100);
+  });
+
+  it('rateio com soma implausível (metade do valor) é ignorado', async () => {
+    const service = build(() =>
+      Promise.resolve(
+        completionOf(
+          '{"costCenterSplits":[{"costCenterName":"Tecnologia","percent":20},{"costCenterName":"Marketing","percent":30}]}',
+        ),
+      ),
+    );
+
+    const result = await service.extract('company-1', { text: 'rateio' });
+
+    expect(result.fields?.costCenterSplits).toBeNull();
+  });
+
+  it('um só Centro de Custo não é rateio', async () => {
+    const service = build(() =>
+      Promise.resolve(
+        completionOf(
+          '{"costCenterSplits":[{"costCenterName":"Tecnologia","percent":100}]}',
+        ),
+      ),
+    );
+
+    const result = await service.extract('company-1', { text: 'rateio' });
+
+    expect(result.fields?.costCenterSplits).toBeNull();
+  });
+
+  it('sem conseguir identificar a área, devolve null em vez de chutar', async () => {
+    const service = build(
+      () => Promise.resolve(completionOf('{"title":"Notebooks"}')),
+      [],
+      ['Tecnologia', 'Marketing'],
+    );
+
+    const result = await service.extract('company-1', { text: 'notebooks' });
+
+    expect(result.fields?.costCenterName).toBeNull();
   });
 });

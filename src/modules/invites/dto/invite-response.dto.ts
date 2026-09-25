@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CompanyMemberRole, InviteStatus } from 'generated/prisma/enums';
 import { InviteEntity, InvitePreview } from '../domain/invite.entity';
+import { PendingInvite } from '../domain/pending-invite';
 
 export class InviteResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -76,5 +77,38 @@ export class InvitePreviewResponseDto {
     dto.reason = preview.reason;
 
     return dto;
+  }
+}
+
+export class PendingInviteResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty()
+  companyName: string;
+
+  @ApiProperty({
+    enum: ['REQUESTER', 'APPROVER', 'FINANCE_ADMIN', 'ACCOUNTANT'],
+  })
+  role: CompanyMemberRole;
+
+  static fromPending(
+    this: void,
+    pending: PendingInvite,
+  ): PendingInviteResponseDto {
+    const dto = new PendingInviteResponseDto();
+
+    dto.id = pending.id;
+    dto.companyName = pending.companyName;
+    dto.role = pending.role;
+
+    return dto;
+  }
+
+  static fromPendingList(
+    this: void,
+    pending: PendingInvite[],
+  ): PendingInviteResponseDto[] {
+    return pending.map(PendingInviteResponseDto.fromPending);
   }
 }

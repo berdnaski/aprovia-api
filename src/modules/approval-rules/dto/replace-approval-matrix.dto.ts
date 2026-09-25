@@ -36,9 +36,15 @@ export class ApprovalRuleRangeDto {
   @Transform(toBigInt)
   maxAmountCents?: bigint | null;
 
-  @ApiProperty({ enum: ['DIRECT_MANAGER', 'COST_CENTER_MANAGER'] })
+  @ApiPropertyOptional({
+    enum: ['DIRECT_MANAGER', 'COST_CENTER_MANAGER'],
+    deprecated: true,
+    description:
+      'Legado: quem aprova agora sai da alçada de cada pessoa, não de um tipo fixo. Aceito só para não quebrar integrações antigas.',
+  })
+  @IsOptional()
   @IsEnum(ApproverType)
-  approverType: ApproverType;
+  approverType?: ApproverType;
 
   @ApiPropertyOptional({
     default: false,

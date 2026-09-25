@@ -84,6 +84,14 @@ export class SubstituteNotApproverError extends ValidationError {
   }
 }
 
+export class SubstituteBelowLimitError extends ValidationError {
+  constructor(limit: string) {
+    super(
+      `Quem substitui assina no seu lugar, então precisa ter alçada igual ou maior que a sua (${limit}). Escolha alguém com alçada suficiente ou um Admin Financeiro.`,
+    );
+  }
+}
+
 export class SubstituteChainError extends ValidationError {
   constructor() {
     super(

@@ -22,8 +22,8 @@ export class PurchaseRequestResponseDto {
   @ApiProperty({ format: 'uuid' })
   requesterId: string;
 
-  @ApiProperty({ format: 'uuid' })
-  costCenterId: string;
+  @ApiProperty({ format: 'uuid', nullable: true, type: String })
+  costCenterId: string | null;
 
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   categoryId: string | null;
@@ -73,6 +73,13 @@ export class PurchaseRequestResponseDto {
   @ApiProperty({ nullable: true, type: Date })
   finalizedAt: Date | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: String,
+    description: 'Só vem na listagem: quem decide agora, quando PENDING.',
+  })
+  currentApproverName: string | null;
+
   static fromEntity(
     this: void,
     entity: PurchaseRequestEntity,
@@ -94,6 +101,7 @@ export class PurchaseRequestResponseDto {
     dto.createdAt = entity.createdAt;
     dto.submittedAt = entity.submittedAt;
     dto.finalizedAt = entity.finalizedAt;
+    dto.currentApproverName = entity.currentApproverName ?? null;
 
     return dto;
   }

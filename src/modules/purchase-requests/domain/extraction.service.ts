@@ -10,6 +10,11 @@ export interface ExtractedItem {
   unitPriceCents: string | null;
 }
 
+export interface ExtractedCostCenterSplit {
+  costCenterName: string;
+  percent: number;
+}
+
 export interface ExtractedFields {
   title: string | null;
   description: string | null;
@@ -17,7 +22,10 @@ export interface ExtractedFields {
   supplierName: string | null;
   totalAmountCents: string | null;
   categoryName: string | null;
+  costCenterName: string | null;
+  costCenterSplits: ExtractedCostCenterSplit[] | null;
   paymentTerms: string | null;
+  foreignCurrencyNote: string | null;
   items: ExtractedItem[];
 }
 
@@ -45,7 +53,10 @@ export const EMPTY_EXTRACTION: ExtractedFields = {
   supplierName: null,
   totalAmountCents: null,
   categoryName: null,
+  costCenterName: null,
+  costCenterSplits: null,
   paymentTerms: null,
+  foreignCurrencyNote: null,
   items: [],
 };
 

@@ -58,22 +58,24 @@ export class CreateDraftUseCase {
 
     await this.entitlementsService.assertOperational(companyId);
 
-    const costCenter = await this.findCostCenterByIdUseCase.execute(
-      data.costCenterId,
-      companyId,
-    );
+    if (data.costCenterId) {
+      const costCenter = await this.findCostCenterByIdUseCase.execute(
+        data.costCenterId,
+        companyId,
+      );
 
-    if (costCenter.disabledAt) {
-      throw new ValidationError(
-        'Este Centro de Custo está inativo e não aceita novos pedidos.',
+      if (costCenter.disabledAt) {
+        throw new ValidationError(
+          'Este Centro de Custo está inativo e não aceita novos pedidos.',
+        );
+      }
+
+      await this.costCenterAccessService.assertCanRequest(
+        costCenter,
+        requesterId,
+        requesterRole,
       );
     }
-
-    await this.costCenterAccessService.assertCanRequest(
-      costCenter,
-      requesterId,
-      requesterRole,
-    );
 
     if (data.categoryId) {
       const category = await this.findCategoryByIdUseCase.execute(
@@ -122,7 +124,7 @@ export class CreateDraftUseCase {
               companyId,
               number: nextRequestNumber(year, lastNumber),
               requesterId,
-              costCenterId: data.costCenterId,
+              costCenterId: data.costCenterId ?? null,
               categoryId: data.categoryId ?? null,
               supplierId: data.supplierId ?? null,
               title: data.title,

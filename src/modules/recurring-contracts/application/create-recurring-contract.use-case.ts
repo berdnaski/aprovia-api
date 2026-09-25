@@ -8,7 +8,10 @@ import { FindCategoryByIdUseCase } from 'src/modules/categories/application/find
 import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
 import { RequestActor } from 'src/modules/purchase-requests/application/find-request-by-id.use-case';
 import { IPurchaseRequestRepository } from 'src/modules/purchase-requests/domain/purchase-requests.repository.interface';
-import { NotFoundError } from 'src/shared/domain/errors/domain.error';
+import {
+  NotFoundError,
+  ValidationError,
+} from 'src/shared/domain/errors/domain.error';
 import { ITransactionManager } from 'src/shared/domain/transaction.manager';
 import { RecurringContractEntity } from '../domain/recurring-contract.entity';
 import {
@@ -59,6 +62,12 @@ export class CreateRecurringContractUseCase {
 
     const costCenterId = data.costCenterId ?? request.costCenterId;
     const categoryId = data.categoryId ?? request.categoryId;
+
+    if (!costCenterId) {
+      throw new ValidationError(
+        'Informe o Centro de Custo que vai receber as cobranças deste contrato.',
+      );
+    }
 
     await this.findCostCenterByIdUseCase.execute(costCenterId, actor.companyId);
 

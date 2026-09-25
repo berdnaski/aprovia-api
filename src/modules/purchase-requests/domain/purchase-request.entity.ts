@@ -5,7 +5,7 @@ export class PurchaseRequestEntity {
   number: string;
   companyId: string;
   requesterId: string;
-  costCenterId: string;
+  costCenterId: string | null;
   categoryId: string | null;
   supplierId: string | null;
 
@@ -26,6 +26,9 @@ export class PurchaseRequestEntity {
   cancelReason: string | null;
 
   updatedAt: Date;
+
+  /** Só a listagem preenche: quem decide agora, quando status é PENDING. */
+  currentApproverName?: string | null;
 
   get isDraft(): boolean {
     return this.status === RequestStatus.DRAFT;

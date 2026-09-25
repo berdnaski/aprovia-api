@@ -74,4 +74,11 @@ export abstract class IApprovalStepWriter {
     approverId: string,
     context?: TransactionContext,
   ): Promise<void>;
+
+  abstract reassignWaitingOf(
+    companyId: string,
+    fromMemberId: string,
+    toMemberId: string,
+    context?: TransactionContext,
+  ): Promise<string[]>;
 }

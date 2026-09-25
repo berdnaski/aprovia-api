@@ -58,6 +58,18 @@ export class InviteRepository implements IInviteRepository {
     return record ? InviteMapper.toDomain(record) : null;
   }
 
+  async listPendingByEmail(email: string): Promise<InviteEntity[]> {
+    const records = await this.prisma.invite.findMany({
+      where: {
+        email: { equals: email, mode: 'insensitive' },
+        status: InviteStatus.PENDING,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return records.map(InviteMapper.toDomain);
+  }
+
   async listByCompany(
     companyId: string,
     status?: InviteStatus,

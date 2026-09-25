@@ -3,7 +3,9 @@ import { CompanyMemberRole } from 'generated/prisma/enums';
 import { IsEnum } from 'class-validator';
 
 export class UpdateMemberRoleDto {
-  @ApiProperty({ enum: ['REQUESTER', 'APPROVER', 'FINANCE_ADMIN', 'ACCOUNTANT'] })
+  @ApiProperty({
+    enum: ['REQUESTER', 'APPROVER', 'FINANCE_ADMIN', 'ACCOUNTANT'],
+  })
   @IsEnum(CompanyMemberRole)
   role: CompanyMemberRole;
 }

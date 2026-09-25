@@ -17,25 +17,25 @@ export class NoMatchingRuleError extends RoutingError {
   }
 }
 
-export class RoutingCycleError extends RoutingError {
-  constructor(memberId: string) {
-    super(
-      'A hierarquia de aprovação está circular: alguém aparece duas vezes na cadeia de líderes. Peça ao Admin Financeiro para revisar quem reporta a quem.',
-      { memberId, rule: 'RN24' },
-    );
-  }
-}
-
 export class NoEligibleApproverError extends RoutingError {
   constructor(amountCents?: bigint) {
     const amount = amountCents ? ` de ${formatCents(amountCents)}` : '';
 
     super(
-      `Nenhum aprovador da empresa tem alçada para autorizar este pedido${amount}. Peça ao Admin Financeiro para aumentar os limites de aprovação ou definir seu líder direto.`,
+      `Ninguém da empresa pode aprovar este pedido${amount}. Quem pede não aprova o próprio pedido, então é preciso ter outro Aprovador ou Admin Financeiro cadastrado.`,
       {
         ...(amountCents && { amountCents: amountCents.toString() }),
         rule: 'RN27',
       },
+    );
+  }
+}
+
+export class NoSecondApproverError extends RoutingError {
+  constructor(amountCents: bigint) {
+    super(
+      `Esta faixa exige duas assinaturas, mas só existe uma pessoa que pode aprovar ${formatCents(amountCents)}. Cadastre outro Aprovador com alçada suficiente, ou deixe a faixa com uma assinatura.`,
+      { amountCents: amountCents.toString(), rule: 'RN26' },
     );
   }
 }

@@ -188,7 +188,11 @@ export class CostCentersController {
   }
 
   @Get(':id')
-  @Roles(CompanyMemberRole.APPROVER, CompanyMemberRole.FINANCE_ADMIN, CompanyMemberRole.ACCOUNTANT)
+  @Roles(
+    CompanyMemberRole.APPROVER,
+    CompanyMemberRole.FINANCE_ADMIN,
+    CompanyMemberRole.ACCOUNTANT,
+  )
   @ApiOperation({ summary: 'Buscar Centro de Custo por ID' })
   @ApiResponse({ status: 200, type: CostCenterResponseDto })
   @ApiResponse({ status: 404, description: 'Centro de Custo não encontrado' })

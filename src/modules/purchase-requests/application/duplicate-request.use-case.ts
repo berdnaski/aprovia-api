@@ -36,7 +36,7 @@ export class DuplicateRequestUseCase {
       actor.memberId,
       actor.role,
       {
-        costCenterId: source.costCenterId,
+        costCenterId: source.costCenterId ?? undefined,
         categoryId: source.categoryId ?? undefined,
         supplierId: source.supplierId ?? undefined,
         title: `${source.title} (cópia)`,

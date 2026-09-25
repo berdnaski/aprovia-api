@@ -521,7 +521,7 @@ model PurchaseRequest {
 
   company_id     String
   requester_id   String
-  cost_center_id String
+  cost_center_id String?
   category_id    String?
   supplier_id    String?
 
@@ -545,7 +545,7 @@ model PurchaseRequest {
 
   company     Company       @relation(fields: [company_id], references: [id], onDelete: Cascade)
   requester   CompanyMember @relation(fields: [requester_id], references: [id])
-  cost_center CostCenter    @relation(fields: [cost_center_id], references: [id])
+  cost_center CostCenter?   @relation(fields: [cost_center_id], references: [id])
   category    Category?     @relation(fields: [category_id], references: [id])
   supplier    Supplier?     @relation(fields: [supplier_id], references: [id])
   canceled_by User?         @relation("RequestCanceledBy", fields: [canceled_by_id], references: [id])

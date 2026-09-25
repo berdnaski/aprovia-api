@@ -1,8 +1,8 @@
-import { ApproverType } from 'generated/prisma/enums';
+import { CompanyMemberRole } from 'generated/prisma/enums';
 import {
   NoEligibleApproverError,
   NoMatchingRuleError,
-  RoutingCycleError,
+  NoSecondApproverError,
 } from './routing.errors';
 import {
   RoutingInput,
@@ -20,16 +20,36 @@ interface Assignment {
 export class ApprovalRoutingService {
   route(input: RoutingInput): RoutingResult {
     const rule = this.selectRule(input);
-    const requiresDualApproval = this.requiresDual(rule, input);
-    const chain = this.buildChain(input);
+    const candidates = this.candidates(input);
+    const first = this.pick(candidates, input);
+
+    if (!first) {
+      throw new NoEligibleApproverError(input.amountCents);
+    }
+
+    const steps: Assignment[] = [this.assign(first, input)];
+
+    if (this.requiresDual(rule, input)) {
+      const second = this.pick(
+        candidates.filter((member) => member.id !== first.id),
+        input,
+        { preferUnlimited: true },
+      );
+
+      if (!second) {
+        throw new NoSecondApproverError(input.amountCents);
+      }
+
+      steps.push(this.assign(second, input));
+    }
 
     return {
       ruleId: rule.id,
-      steps: chain.map((assignment, index): RoutingStep => ({
+      steps: steps.map((assignment, index): RoutingStep => ({
         stepOrder: index + 1,
         expectedApproverId: assignment.approverId,
         onBehalfOfId: assignment.onBehalfOfId,
-        requiresDualApproval,
+        requiresDualApproval: false,
       })),
     };
   }
@@ -74,51 +94,61 @@ export class ApprovalRoutingService {
     );
   }
 
-  private buildChain(input: RoutingInput): Assignment[] {
-    const rule = this.selectRule(input);
-    const members = new Map<string, RoutingMember>(
-      [...input.hierarchy, ...input.financeAdmins, input.requester].map(
-        (member) => [member.id, member],
-      ),
+  private candidates(input: RoutingInput): RoutingMember[] {
+    return input.members.filter(
+      (member) =>
+        !member.disabled &&
+        member.id !== input.requester.id &&
+        (member.role === CompanyMemberRole.APPROVER ||
+          member.role === CompanyMemberRole.FINANCE_ADMIN),
+    );
+  }
+
+  private unlimited(member: RoutingMember): boolean {
+    return member.role === CompanyMemberRole.FINANCE_ADMIN;
+  }
+
+  private covers(member: RoutingMember, amountCents: bigint): boolean {
+    return this.unlimited(member) || member.approvalLimitCents >= amountCents;
+  }
+
+  private pick(
+    candidates: RoutingMember[],
+    input: RoutingInput,
+    options: { preferUnlimited?: boolean } = {},
+  ): RoutingMember | null {
+    const able = candidates.filter((member) =>
+      this.covers(member, input.amountCents),
     );
 
-    const startId =
-      rule.approverType === ApproverType.COST_CENTER_MANAGER
-        ? input.costCenter.managerId
-        : input.requester.managerId;
-
-    const steps: Assignment[] = [];
-    const visited = new Set<string>();
-    let currentId: string | null = startId;
-
-    while (currentId) {
-      if (visited.has(currentId)) {
-        throw new RoutingCycleError(currentId);
-      }
-
-      visited.add(currentId);
-
-      const current: RoutingMember | undefined = members.get(currentId);
-
-      if (!current) {
-        break;
-      }
-
-      if (currentId === input.requester.id) {
-        currentId = current.managerId;
-        continue;
-      }
-
-      steps.push(this.assign(current, input));
-
-      if (current.approvalLimitCents >= input.amountCents) {
-        return steps;
-      }
-
-      currentId = current.managerId;
+    if (able.length === 0) {
+      return null;
     }
 
-    return [...steps, this.fallbackToFinance(input, visited)];
+    const rank = (member: RoutingMember): number[] => [
+      options.preferUnlimited
+        ? this.unlimited(member)
+          ? 0
+          : 1
+        : this.unlimited(member)
+          ? 1
+          : 0,
+      member.costCenterId === input.costCenter.id ? 0 : 1,
+      this.unlimited(member) ? 0 : Number(member.approvalLimitCents),
+    ];
+
+    return [...able].sort((left, right) => {
+      const a = rank(left);
+      const b = rank(right);
+
+      for (let index = 0; index < a.length; index += 1) {
+        if (a[index] !== b[index]) {
+          return a[index] - b[index];
+        }
+      }
+
+      return left.id.localeCompare(right.id);
+    })[0];
   }
 
   private assign(approver: RoutingMember, input: RoutingInput): Assignment {
@@ -142,20 +172,5 @@ export class ApprovalRoutingService {
     }
 
     return at >= member.absentFrom && at <= member.absentUntil;
-  }
-
-  private fallbackToFinance(
-    input: RoutingInput,
-    visited: Set<string>,
-  ): Assignment {
-    const eligible = input.financeAdmins.find(
-      (admin) => admin.id !== input.requester.id && !visited.has(admin.id),
-    );
-
-    if (!eligible) {
-      throw new NoEligibleApproverError(input.amountCents);
-    }
-
-    return this.assign(eligible, input);
   }
 }

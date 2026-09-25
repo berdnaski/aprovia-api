@@ -27,6 +27,7 @@ import { ManageInvitesUseCase } from '../application/manage-invites.use-case';
 import { CreateInviteDto } from '../dto/create-invite.dto';
 import {
   InvitePreviewResponseDto,
+  PendingInviteResponseDto,
   InviteResponseDto,
 } from '../dto/invite-response.dto';
 
@@ -120,6 +121,40 @@ export class InvitesController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<InviteResponseDto> {
     const invite = await this.manageInvitesUseCase.revoke(id, companyId);
+
+    return InviteResponseDto.fromEntity(invite);
+  }
+
+  @Get('mine')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({
+    summary: 'Convites pendentes para o e-mail de quem está logado',
+    description:
+      'Não exige empresa: é o que permite a quem foi convidado entrar sem cair na criação de empresa.',
+  })
+  @ApiResponse({ status: 200, type: [PendingInviteResponseDto] })
+  async mine(
+    @CurrentUser('email') email: string,
+  ): Promise<PendingInviteResponseDto[]> {
+    const pending = await this.manageInvitesUseCase.listPendingFor(email);
+
+    return PendingInviteResponseDto.fromPendingList(pending);
+  }
+
+  @Post(':id/accept')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({
+    summary: 'Aceitar um convite pendente sem o link do e-mail',
+    description:
+      'Só funciona para quem está logado com o e-mail destinatário (RN05).',
+  })
+  @ApiResponse({ status: 201, type: InviteResponseDto })
+  @ApiResponse({ status: 403, description: 'E-mail diferente do convidado' })
+  async acceptPending(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ): Promise<InviteResponseDto> {
+    const { invite } = await this.acceptInviteUseCase.byId(id, userId);
 
     return InviteResponseDto.fromEntity(invite);
   }

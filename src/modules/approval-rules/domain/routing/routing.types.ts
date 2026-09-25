@@ -1,17 +1,18 @@
-import { ApproverType } from 'generated/prisma/enums';
+import { CompanyMemberRole } from 'generated/prisma/enums';
 
 export interface RoutingMember {
   id: string;
+  role: CompanyMemberRole;
   approvalLimitCents: bigint;
-  managerId: string | null;
+  costCenterId: string | null;
   absentFrom: Date | null;
   absentUntil: Date | null;
   substituteId: string | null;
+  disabled: boolean;
 }
 
 export interface RoutingCostCenter {
   id: string;
-  managerId: string;
 }
 
 export interface RoutingRule {
@@ -20,7 +21,6 @@ export interface RoutingRule {
   categoryId: string | null;
   minAmountCents: bigint;
   maxAmountCents: bigint | null;
-  approverType: ApproverType;
   requiresDualApproval: boolean;
   isActive: boolean;
 }
@@ -30,10 +30,9 @@ export interface RoutingInput {
   requester: RoutingMember;
   costCenter: RoutingCostCenter;
   categoryId: string | null;
-  hierarchy: RoutingMember[];
+  members: RoutingMember[];
   rules: RoutingRule[];
   dualApprovalThresholdCents: bigint | null;
-  financeAdmins: RoutingMember[];
   at: Date;
 }
 

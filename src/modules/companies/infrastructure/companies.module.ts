@@ -23,6 +23,7 @@ import { UpdateMemberRoleUseCase } from '../application/update-member-role.use-c
 import { ICompanyRepository } from '../domain/companies.repository.interface';
 import { ICompanyMemberRepository } from '../domain/company-members.repository.interface';
 import { HierarchyService } from '../domain/services/hierarchy.service';
+import { AbsenceHandoverRegistry } from '../domain/services/absence-handover.registry';
 import { MemberResponsibilityRegistry } from '../domain/services/member-responsibility.registry';
 import { CompaniesController } from './companies.controller';
 import { CompanyRepository } from './companies.repository';
@@ -48,6 +49,7 @@ import { OnboardingController } from './onboarding.controller';
     { provide: ICompanyRepository, useClass: CompanyRepository },
     { provide: ICompanyMemberRepository, useClass: CompanyMemberRepository },
     HierarchyService,
+    AbsenceHandoverRegistry,
     MemberResponsibilityRegistry,
     CreateCompanyUseCase,
     FindActiveMembershipUseCase,
@@ -70,6 +72,7 @@ import { OnboardingController } from './onboarding.controller';
     FindMemberByIdUseCase,
     FindActiveMembershipUseCase,
     FindCompanyByIdUseCase,
+    AbsenceHandoverRegistry,
     MemberResponsibilityRegistry,
     ManageOnboardingUseCase,
   ],

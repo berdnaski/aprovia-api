@@ -27,6 +27,8 @@ export abstract class IInviteRepository {
     email: string,
   ): Promise<InviteEntity | null>;
 
+  abstract listPendingByEmail(email: string): Promise<InviteEntity[]>;
+
   abstract listByCompany(
     companyId: string,
     status?: InviteStatus,

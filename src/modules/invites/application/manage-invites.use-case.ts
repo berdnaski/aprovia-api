@@ -6,6 +6,7 @@ import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-c
 import { FindUserByIdUseCase } from 'src/modules/users/application/find-user-by-id.use-case';
 import { NotFoundError } from 'src/shared/domain/errors/domain.error';
 import { InviteEntity, InvitePreview } from '../domain/invite.entity';
+import { PendingInvite } from '../domain/pending-invite';
 import { InviteNotPendingError } from '../domain/invites.errors';
 import { IInviteRepository } from '../domain/invites.repository.interface';
 import { SendInviteUseCase } from './send-invite.use-case';
@@ -30,6 +31,24 @@ export class ManageInvitesUseCase {
 
   list(companyId: string, status?: InviteStatus): Promise<InviteEntity[]> {
     return this.inviteRepository.listByCompany(companyId, status);
+  }
+
+  async listPendingFor(email: string): Promise<PendingInvite[]> {
+    const invites = await this.inviteRepository.listPendingByEmail(email);
+
+    return Promise.all(
+      invites.map(async (invite) => {
+        const company = await this.findCompanyByIdUseCase.execute(
+          invite.companyId,
+        );
+
+        return {
+          id: invite.id,
+          companyName: company.tradeName ?? company.legalName,
+          role: invite.role,
+        };
+      }),
+    );
   }
 
   async resend(id: string, companyId: string): Promise<InviteEntity> {

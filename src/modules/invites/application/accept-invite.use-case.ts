@@ -51,10 +51,26 @@ export class AcceptInviteUseCase {
       throw new NotFoundError('Convite');
     }
 
-    const invite = await this.inviteRepository.findById(record.referenceId);
+    return this.accept(record.referenceId, userId, record.id);
+  }
+
+  /**
+   * Sem o token do e-mail: quem está logado já teve o endereço confirmado, e
+   * o convite só é aceito quando esse endereço é o destinatário.
+   */
+  async byId(inviteId: string, userId: string): Promise<AcceptedInvite> {
+    return this.accept(inviteId, userId, null);
+  }
+
+  private async accept(
+    inviteId: string,
+    userId: string,
+    tokenId: string | null,
+  ): Promise<AcceptedInvite> {
+    const invite = await this.inviteRepository.findById(inviteId);
 
     if (!invite) {
-      throw new NotFoundError('Convite', record.referenceId);
+      throw new NotFoundError('Convite', inviteId);
     }
 
     if (invite.status !== InviteStatus.PENDING) {
@@ -72,10 +88,17 @@ export class AcceptInviteUseCase {
     }
 
     return this.transactionManager.run(async (context) => {
-      const consumed = await this.tokensRepository.consume(record.id);
+      if (tokenId) {
+        const consumed = await this.tokensRepository.consume(tokenId);
 
-      if (!consumed) {
-        throw new InviteNotPendingError(InviteStatus.ACCEPTED);
+        if (!consumed) {
+          throw new InviteNotPendingError(InviteStatus.ACCEPTED);
+        }
+      } else {
+        await this.tokensRepository.consumeByReferences(
+          [invite.id],
+          TokenType.INVITE,
+        );
       }
 
       await this.entitlementsService.assertSeatAvailable(

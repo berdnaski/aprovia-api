@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CompanyMemberRole } from 'generated/prisma/enums';
+import { CompanyMemberEntity } from 'src/modules/companies/domain/company-member.entity';
 import { FindCompanyByIdUseCase } from 'src/modules/companies/application/find-company-by-id.use-case';
 import { ICompanyMemberRepository } from 'src/modules/companies/domain/company-members.repository.interface';
 import { FindCostCenterByIdUseCase } from 'src/modules/cost-centers/application/find-cost-center-by-id.use-case';
@@ -41,42 +41,33 @@ export class SimulateRouteUseCase {
       throw new NotFoundError('Membro', data.requesterId);
     }
 
-    const toRoutingMember = (member: {
-      id: string;
-      approvalLimitCents: bigint;
-      managerId: string | null;
-      absentFrom: Date | null;
-      absentUntil: Date | null;
-      substituteId: string | null;
-    }): RoutingMember => ({
+    const toRoutingMember = (member: CompanyMemberEntity): RoutingMember => ({
       id: member.id,
+      role: member.role,
       approvalLimitCents: member.approvalLimitCents,
-      managerId: member.managerId,
+      costCenterId: member.defaultCostCenterId,
       absentFrom: member.absentFrom,
       absentUntil: member.absentUntil,
       substituteId: member.substituteId,
+      disabled: member.disabledAt !== null,
     });
 
     const input: RoutingInput = {
       amountCents: data.amountCents,
       requester: toRoutingMember(requester),
-      costCenter: { id: costCenter.id, managerId: costCenter.managerId },
+      costCenter: { id: costCenter.id },
       categoryId: data.categoryId ?? null,
-      hierarchy: members.map(toRoutingMember),
+      members: members.map(toRoutingMember),
       rules: rules.map((rule) => ({
         id: rule.id,
         costCenterId: rule.costCenterId,
         categoryId: rule.categoryId,
         minAmountCents: rule.minAmountCents,
         maxAmountCents: rule.maxAmountCents,
-        approverType: rule.approverType,
         requiresDualApproval: rule.requiresDualApproval,
         isActive: rule.isActive,
       })),
       dualApprovalThresholdCents: company.dualApprovalThresholdCents,
-      financeAdmins: members
-        .filter((member) => member.role === CompanyMemberRole.FINANCE_ADMIN)
-        .map(toRoutingMember),
       at: data.at ?? new Date(),
     };
 

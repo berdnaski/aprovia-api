@@ -1,5 +1,5 @@
 import { BullModule } from '@nestjs/bullmq';
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { ApprovalRulesModule } from 'src/modules/approval-rules/infrastructure/approval-rules.module';
 import { BudgetsModule } from 'src/modules/budgets/infrastructure/budgets.module';
 import { CategoriesModule } from 'src/modules/categories/infrastructure/categories.module';
@@ -31,7 +31,9 @@ import { ReassignStepUseCase } from '../application/reassign-step.use-case';
 import { SubmitRequestUseCase } from '../application/submit-request.use-case';
 import { UpdateDraftUseCase } from '../application/update-draft.use-case';
 import { IExtractionResultRepository } from '../domain/extraction-results.repository.interface';
+import { AbsenceHandoverRegistry } from 'src/modules/companies/domain/services/absence-handover.registry';
 import { IApprovalStepWriter } from '../domain/approval-steps.writer';
+import { ApprovalQueueHandover } from './approval-queue.handover';
 import { ISlaStepRepository } from '../domain/sla-steps.repository.interface';
 import { IDecisionRepository } from '../domain/decisions.repository.interface';
 import { IExtractionService } from '../domain/extraction.service';
@@ -119,6 +121,7 @@ import { RequestItemRepository } from './request-items.repository';
     GetEmailApprovalUseCase,
     DecideByEmailUseCase,
     ExtractionProcessor,
+    ApprovalQueueHandover,
   ],
   exports: [
     IPurchaseRequestRepository,
@@ -129,4 +132,13 @@ import { RequestItemRepository } from './request-items.repository';
     ManageRequestAllocationsUseCase,
   ],
 })
-export class PurchaseRequestsModule {}
+export class PurchaseRequestsModule implements OnModuleInit {
+  constructor(
+    private readonly absenceHandoverRegistry: AbsenceHandoverRegistry,
+    private readonly approvalQueueHandover: ApprovalQueueHandover,
+  ) {}
+
+  onModuleInit(): void {
+    this.absenceHandoverRegistry.register(this.approvalQueueHandover);
+  }
+}
